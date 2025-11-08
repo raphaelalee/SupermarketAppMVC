@@ -7,10 +7,6 @@ const path = require('path');
 const crypto = require('crypto');
 const methodOverride = require('method-override');
 
-// MVC imports
-const SupermarketController = require('./controllers/SupermarketController');
-const { Users, Product } = require('./models/supermarket');
-
 const app = express();
 
 /* ======================
@@ -46,7 +42,7 @@ const storage = multer.diskStorage({
 const upload = multer({ storage });
 
 /* ======================
-   Auth middlewares
+   Middleware for auth
    ====================== */
 const checkAuthenticated = (req, res, next) => {
   if (req.session && req.session.user) return next();
@@ -61,181 +57,65 @@ const checkAdmin = (req, res, next) => {
 };
 
 /* ======================
-   Registration validation
+   Models
    ====================== */
-const validateRegistration = (req, res, next) => {
-  const { username, email, password, address, contact, role } = req.body;
-  if (!username || !email || !password || !address || !contact || !role) {
-    return res.status(400).send('All fields are required.');
-  }
-  if (password.length < 6) {
-    req.flash('error', 'Password should be at least 6 or more characters long');
-    req.flash('formData', req.body);
-    return res.redirect('/register');
-  }
-  next();
-};
+const { Users, Product } = require('./models/supermarket');
 
 /* ======================
-   Product routes (MVC)
+   Controllers
    ====================== */
-// REST-style routes
-app.get('/products', SupermarketController.listAll);
-app.get('/products/:id', SupermarketController.getById);
-app.post('/products', upload.single('image'), SupermarketController.add);
-app.put('/products/:id', upload.single('image'), SupermarketController.update);
-app.delete('/products/:id', SupermarketController.delete);
-
-// Form-friendly routes for PUT/DELETE
-app.post('/products/:id/update', upload.single('image'), (req, res, next) => {
-  req.method = 'PUT';
-  next();
-}, SupermarketController.update);
-
-
-app.post('/products/:id/delete', (req, res, next) => {
-  req.method = 'DELETE';
-  next();
-}, SupermarketController.delete);
+const SupermarketController = require('./controllers/SupermarketController');
+const ProductController = require('./controllers/ProductController');
+const CartController = require('./controllers/CartController');
+const UserController = require('./controllers/UserController');
+const InventoryController = require('./controllers/InventoryController');
+const SearchController = require('./controllers/SearchController');
+const ReportController = require('./controllers/ReportController');
 
 /* ======================
-   Page routes (views)
+   Routes (Controllers)
    ====================== */
+
+// --- Home ---
 app.get('/', (req, res) => res.render('index', { user: req.session.user }));
 
-// Admin inventory page
-app.get('/inventory', checkAuthenticated, checkAdmin, (req, res, next) => 
-  SupermarketController.listAll(req, res, next)
-);
+// --- Products (CRUD) ---
+app.get('/products', ProductController.listAll);
+app.get('/products/:id', ProductController.getById);
+app.post('/products', upload.single('image'), ProductController.add);
+app.put('/products/:id', upload.single('image'), ProductController.update);
+app.delete('/products/:id', ProductController.delete);
+app.post('/products/:id/update', upload.single('image'), (req, res, next) => { req.method = 'PUT'; next(); }, ProductController.update);
+app.post('/products/:id/delete', (req, res, next) => { req.method = 'DELETE'; next(); }, ProductController.delete);
 
-// User shopping page
-app.get('/shopping', checkAuthenticated, (req, res, next) => 
-  SupermarketController.listAll(req, res, next)
-);
+// --- Inventory (Admin only) ---
+app.get('/inventory', checkAuthenticated, checkAdmin, InventoryController.viewInventory);
+app.get('/updateProduct/:id', checkAuthenticated, checkAdmin, ProductController.renderEditForm);
+app.get('/addProduct', checkAuthenticated, checkAdmin, (req, res) => res.render('addProduct', { user: req.session.user }));
 
-// Product detail page
-app.get('/product/:id', checkAuthenticated, (req, res, next) => 
-  SupermarketController.getById(req, res, next)
-);
+// --- Shopping / User pages ---
+app.get('/shopping', checkAuthenticated, SupermarketController.listAll);
+app.get('/product/:id', checkAuthenticated, ProductController.getById);
 
-// Add new product (admin only)
-app.get('/addProduct', checkAuthenticated, checkAdmin, (req, res) => 
-  res.render('addProduct', { user: req.session.user })
-);
+// --- Cart ---
+app.post('/add-to-cart/:id', checkAuthenticated, CartController.addToCart);
+app.get('/cart', checkAuthenticated, CartController.viewCart);
 
-// Update product page (admin only)
-app.get('/updateProduct/:id', checkAuthenticated, checkAdmin, (req, res) =>
-  SupermarketController.renderEditForm(req, res)
-);
+// --- Search ---
+app.get('/search', SearchController.searchProducts);
 
+// --- Reports ---
+app.get('/report', checkAuthenticated, checkAdmin, ReportController.generateReport);
 
-
-
-/* ======================
-   User registration & login
-   ====================== */
-app.get('/register', (req, res) => {
-  res.render('register', {
-    messages: req.flash('error'),
-    formData: req.flash('formData')[0]
-  });
-});
-
-app.post('/register', validateRegistration, (req, res) => {
-  const { username, email, password, address, contact, role } = req.body;
-  const hashed = crypto.createHash('sha1').update(password).digest('hex');
-  Users.create({ username, email, password: hashed, address, contact, role }, (err) => {
-    if (err) {
-      req.flash('error', err.message);
-      return res.redirect('/register');
-    }
-    req.flash('success', 'Registration successful! Please log in.');
-    return res.redirect('/login');
-  });
-});
-
-app.get('/login', (req, res) => {
-  res.render('login', {
-    messages: req.flash('success'),
-    errors: req.flash('error')
-  });
-});
-
-app.post('/login', (req, res) => {
-  const { email, password } = req.body;
-  if (!email || !password) {
-    req.flash('error', 'All fields are required.');
-    return res.redirect('/login');
-  }
-
-  Users.getByEmail(email, (err, results) => {
-    if (err) {
-      req.flash('error', err.message);
-      return res.redirect('/login');
-    }
-
-    if (!results || results.length === 0) {
-      req.flash('error', 'Invalid email or password.');
-      return res.redirect('/login');
-    }
-
-    const user = results[0];
-    const hashed = crypto.createHash('sha1').update(password).digest('hex');
-
-    if (user.password !== hashed) {
-      req.flash('error', 'Invalid email or password.');
-      return res.redirect('/login');
-    }
-
-    req.session.user = user;
-    console.log('Logged in user:', user); // ✅ Debug check
-
-    req.flash('success', 'Login successful!');
-    return user.role === 'user' ? res.redirect('/shopping') : res.redirect('/inventory');
-  });
-});
-
-app.get('/logout', (req, res) => {
-  req.session.destroy(() => res.redirect('/'));
-});
-
-/* ======================
-   Cart functionality
-   ====================== */
-app.post('/add-to-cart/:id', checkAuthenticated, (req, res) => {
-  const productId = parseInt(req.params.id, 10);
-  const quantity = parseInt(req.body.quantity, 10) || 1;
-
-  Product.getById(productId, (err, results) => {
-    if (err) return res.status(500).send('Error adding to cart');
-    if (!results || results.length === 0) return res.status(404).send('Product not found');
-
-    const product = results[0];
-    if (!req.session.cart) req.session.cart = [];
-
-    const existing = req.session.cart.find(item => item.productId === productId);
-    if (existing) {
-      existing.quantity += quantity;
-    } else {
-      req.session.cart.push({
-        productId,
-        productName: product.productName,
-        price: product.price,
-        quantity,
-        image: product.image
-      });
-    }
-    res.redirect('/cart');
-  });
-});
-
-app.get('/cart', checkAuthenticated, (req, res) => {
-  const cart = req.session.cart || [];
-  res.render('cart', { cart, user: req.session.user });
-});
+// --- User auth ---
+app.get('/register', UserController.renderRegister);
+app.post('/register', UserController.registerUser);
+app.get('/login', UserController.renderLogin);
+app.post('/login', UserController.loginUser);
+app.get('/logout', UserController.logoutUser);
 
 /* ======================
    Server
    ====================== */
 const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => console.log(`🚀 Server running on http://localhost:${PORT}`));
+app.listen(PORT, () => console.log(`Server running on http://localhost:${PORT}`));
