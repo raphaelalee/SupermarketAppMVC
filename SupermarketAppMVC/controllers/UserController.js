@@ -10,29 +10,46 @@ const UserController = {};
 
 UserController.renderRegister = function (req, res) {
 	// `register.ejs` expects `messages`/`errors` arrays (from connect-flash)
-	const errors = req.flash('error') || [];
-	const messages = req.flash('success') || [];
-	res.render('register', { user: req.session.user, errors, messages });
+		const errors = req.flash('error') || [];
+		const messages = req.flash('success') || [];
+		// Some templates expect `formData` to pre-fill fields after a failed submit.
+		// If no flash data is present, provide an empty object so EJS doesn't throw.
+		const formData = req.flash('formData')[0] || {};
+		res.render('register', { user: req.session.user, errors, messages, formData });
 };
 
 UserController.registerUser = function (req, res) {
-	const { username, email, password, address, contact } = req.body || {};
+	const { username, email, password, address, contact, role } = req.body || {};
+	const formData = { username, email, address, contact, role };
+		console.log('Register attempt:', { username, email, role });
+
 	if (!username || !email || !password) {
 		req.flash('error', 'Username, email and password are required');
+		req.flash('formData', formData);
 		return res.redirect('/register');
 	}
 
 	const hashed = hashPassword(password);
-	const role = 'user';
+	const userRole = role || 'user';
 
-	Users.create({ username, email, password: hashed, address, contact, role }, function (err, results) {
+	Users.create({ username, email, password: hashed, address, contact, role: userRole }, function (err, results) {
 		if (err) {
 			console.error('Error creating user:', err);
-			req.flash('error', 'Unable to create user');
+			req.flash('error', 'Unable to create user: ' + (err.message || ''));
+			req.flash('formData', formData);
 			return res.redirect('/register');
 		}
-		req.flash('success', 'Registration successful. Please log in.');
-		return res.redirect('/login');
+
+		// Auto-login the newly registered user
+		req.session.user = {
+			id: results.insertId,
+			username,
+			email,
+			role: userRole
+		};
+
+		req.flash('success', 'Registration successful. You are now logged in.');
+		return res.redirect('/shopping');
 	});
 };
 
