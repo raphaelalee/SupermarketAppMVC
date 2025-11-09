@@ -9,7 +9,10 @@ function hashPassword(password) {
 const UserController = {};
 
 UserController.renderRegister = function (req, res) {
-	res.render('register', { user: req.session.user });
+	// `register.ejs` expects `messages`/`errors` arrays (from connect-flash)
+	const errors = req.flash('error') || [];
+	const messages = req.flash('success') || [];
+	res.render('register', { user: req.session.user, errors, messages });
 };
 
 UserController.registerUser = function (req, res) {
