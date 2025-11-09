@@ -34,23 +34,43 @@
       </div>
     </nav>
 
-    <div class="container">
-        <p style="text-align: center;">
-            <% if (user) {%>
-              <% if (user.role === "admin") { %>
-                <br>
-                Back to <a href="/inventory">inventory!</a>
-              <% } else { %>
-                <br>
-                Continue <a href="/shopping">Shopping!</a>
-                <% } %>
+    <header class="site-header py-3">
+      <div class="container d-flex align-items-center justify-content-between">
+        <div class="d-flex align-items-center">
+          <div class="logo me-3">E.G. Olsen</div>
+        </div>
+        <nav>
+          <ul class="nav align-items-center">
+            <li class="nav-item"><a class="nav-link" href="/shopping">Shop All</a></li>
+            <li class="nav-item"><a class="nav-link" href="#about">About</a></li>
+            <li class="nav-item"><a class="nav-link" href="#contact">Contact</a></li>
+            <% if (!user) { %>
+              <li class="nav-item"><a class="nav-link" href="/login">Log In</a></li>
             <% } else { %>
-            <br>
-            Welcome to supermarket app! <br>
-            Please <a href = "/login" >login</a> to continue...
+              <li class="nav-item"><a class="nav-link" href="/logout">Logout</a></li>
             <% } %>
-        </p>
-        
-    </div>
+            <li class="nav-item ms-3">
+              <a class="nav-link" href="/cart">🛒 <span class="cart-count"><%= (req.session.cart ? Object.keys(req.session.cart).length : 0) %></span></a>
+            </li>
+          </ul>
+        </nav>
+      </div>
+    </header>
+
+    <main>
+      <section class="hero split-hero">
+        <div class="container">
+          <div class="row g-0 align-items-center">
+            <div class="col-lg-6 hero-left">
+              <h1 class="display-3">Quality Groceries,<br>Delivered Simply</h1>
+              <p class="lead mt-3">Welcome to E.G. Olsen, your one-stop online shop for fresh produce, pantry essentials and more — delivered with care across Singapore.</p>
+            </div>
+            <div class="col-lg-6 hero-right">
+              <img src="/images/broccoli2.jpg" alt="Fresh groceries" class="hero-image img-fluid">
+            </div>
+          </div>
+        </div>
+      </section>
+    </main>
 </body>
 </html>

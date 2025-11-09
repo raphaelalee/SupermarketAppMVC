@@ -57,3 +57,19 @@ footer{background:transparent}
 @media (max-width:576px){
   .product-grid{grid-template-columns:repeat(2,1fr)}
 }
+
+/* Homepage hero split */
+.split-hero{padding:3rem 0}
+.split-hero .hero-left{padding:3rem}
+.split-hero .hero-right{min-height:320px}
+.split-hero .hero-image{width:100%; height:100%; object-fit:cover; border-radius:12px}
+.site-header{background:transparent}
+.logo{font-family:'Playfair Display', serif; font-size:1.5rem; color:var(--brand-green); font-weight:700}
+.nav .nav-link{color:var(--text); margin-left:0.8rem}
+.cart-count{background:#fff; color:var(--brand-green); padding:2px 8px; border-radius:12px; margin-left:6px; font-weight:600}
+
+/* Make hero left background pale green like the example */
+.split-hero .hero-left{background:linear-gradient(180deg,#f2faea,#f7fbf7); border-radius:12px 0 0 12px}
+.split-hero .hero-right{padding-left:1rem}
+.split-hero .display-3{color:var(--brand-green); font-family:'Playfair Display', serif}
+
