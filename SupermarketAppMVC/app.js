@@ -28,6 +28,25 @@ app.use(session({
 }));
 app.use(flash());
 
+// Make session-based data available to all views via res.locals
+app.use((req, res, next) => {
+   res.locals.user = req.session && req.session.user ? req.session.user : null;
+   res.locals.cart = req.session && req.session.cart ? req.session.cart : {};
+   res.locals.cartCount = res.locals.cart ? Object.keys(res.locals.cart).length : 0;
+   res.locals.errors = req.flash('error') || [];
+   res.locals.messages = req.flash('success') || [];
+   next();
+});
+
+// Make common template variables available to all views
+app.use((req, res, next) => {
+   res.locals.user = req.session ? req.session.user : null;
+   res.locals.cartCount = req.session && req.session.cart ? Object.keys(req.session.cart).length : 0;
+   res.locals.errors = req.flash('error') || [];
+   res.locals.messages = req.flash('success') || [];
+   next();
+});
+
 /* ======================
    Multer (image uploads)
    ====================== */
@@ -71,10 +90,53 @@ const UserController = require('./controllers/UserController');
 const InventoryController = require('./controllers/InventoryController');
 const SearchController = require('./controllers/SearchController');
 const ReportController = require('./controllers/ReportController');
+const CheckoutController = require('./controllers/CheckoutController');
 
 /* ======================
    Routes (Controllers)
    ====================== */
+
+// Build detailed cart for templates (id -> product details + qty)
+app.use((req, res, next) => {
+   const cart = req.session && req.session.cart ? req.session.cart : {};
+   const ids = Object.keys(cart);
+   if (ids.length === 0) {
+      res.locals.cartDetailed = [];
+      res.locals.cartTotal = 0;
+      res.locals.cartCount = 0;
+      return next();
+   }
+
+   // Fetch all products once and map by id (more resilient than per-id queries)
+   Product.getAll((err, products) => {
+      if (err || !products) {
+         console.error('Error fetching products for cart middleware:', err);
+         res.locals.cartDetailed = [];
+         res.locals.cartTotal = 0;
+         res.locals.cartCount = 0;
+         return next();
+      }
+
+      const byId = products.reduce((acc, p) => {
+         acc[String(p.id)] = p;
+         return acc;
+      }, {});
+
+      const detailed = ids.map(id => {
+         const p = byId[String(id)];
+         const qty = parseInt(cart[id], 10) || 0;
+         if (!p) return { id, productName: 'Unknown product', image: 'broccoli.png', price: 0, quantity: qty, subtotal: 0 };
+         const price = parseFloat(p.price) || 0;
+         return { id: p.id, productName: p.productName, image: p.image, price, quantity: qty, subtotal: price * qty };
+      }).filter(Boolean);
+
+      res.locals.cartDetailed = detailed;
+      res.locals.cartTotal = detailed.reduce((s, it) => s + (it.subtotal || 0), 0);
+      res.locals.cartCount = detailed.reduce((s, it) => s + (it.quantity || 0), 0);
+      return next();
+   });
+});
+
 
 // --- Home ---
 app.get('/', (req, res) => res.render('index', { user: req.session.user }));
@@ -100,6 +162,12 @@ app.get('/product/:id', checkAuthenticated, ProductController.getById);
 // --- Cart ---
 app.post('/add-to-cart/:id', checkAuthenticated, CartController.addToCart);
 app.get('/cart', checkAuthenticated, CartController.viewCart);
+app.post('/cart/update/:id', checkAuthenticated, CartController.updateQuantity);
+app.post('/cart/remove/:id', checkAuthenticated, CartController.removeFromCart);
+
+// Checkout routes (shared for admin & user)
+app.get('/checkout', checkAuthenticated, CheckoutController.renderCheckout);
+app.post('/checkout', checkAuthenticated, CheckoutController.processCheckout);
 
 // --- Search ---
 app.get('/search', SearchController.searchProducts);
@@ -114,8 +182,6 @@ app.get('/login', UserController.renderLogin);
 app.post('/login', UserController.loginUser);
 app.get('/logout', UserController.logoutUser);
 
-/* ======================
-   Server
-   ====================== */
+
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => console.log(`Server running on http://localhost:${PORT}`));

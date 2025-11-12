@@ -68,8 +68,48 @@ footer{background:transparent}
 .nav .nav-link{color:var(--text); margin-left:0.8rem}
 .cart-count{background:#fff; color:var(--brand-green); padding:2px 8px; border-radius:12px; margin-left:6px; font-weight:600}
 
+/* Sticky header and refinements for Wix-like layout */
+.navbar.sticky-top, .navbar{position:sticky;top:0;z-index:1100}
+.navbar .container{max-width:1200px}
+.navbar .logo{font-size:1.6rem}
+.navbar .nav-link{color:rgba(0,0,0,0.75); margin-left:1rem}
+
+/* Hero CTA */
+.hero .btn-lg{background:var(--brand-green); border-color:var(--brand-green); color:#fff}
+.hero .btn-lg:hover{background:#25602b}
+
+/* Product card refinements */
+.product-card .product-card-body{padding:1.2rem}
+.product-title a{color:var(--brand-green)}
+.product-card .h5{margin-bottom:0}
+
+/* Cart drawer larger and friendlier */
+.cart-drawer{width:400px}
+.cart-footer .btn-primary{background:var(--brand-green); border-color:var(--brand-green)}
+.cart-summary{font-weight:600}
+
+/* Badge for cart count in header */
+.cart-count.badge{background:#fff; color:var(--brand-green); border:1px solid rgba(0,0,0,0.05)}
+
 /* Make hero left background pale green like the example */
 .split-hero .hero-left{background:linear-gradient(180deg,#f2faea,#f7fbf7); border-radius:12px 0 0 12px}
 .split-hero .hero-right{padding-left:1rem}
 .split-hero .display-3{color:var(--brand-green); font-family:'Playfair Display', serif}
+
+/* Drawer cart styles */
+.cart-drawer{
+  position:fixed; right:-420px; top:0; height:100%; width:360px; background:#fff; z-index:1200;
+  box-shadow: -10px 0 30px rgba(0,0,0,0.12); transition:right .28s ease; display:flex; flex-direction:column;
+}
+.cart-drawer.open{right:0}
+.cart-header{display:flex; justify-content:space-between; align-items:center; padding:1rem; border-bottom:1px solid #eee}
+.cart-body{padding:1rem; overflow:auto; flex:1}
+.cart-footer{padding:1rem; border-top:1px solid #eee}
+.cart-thumb{width:64px; height:64px; object-fit:cover; border-radius:8px}
+.cart-item{display:flex; gap:0.75rem; padding:0.5rem 0; align-items:center}
+.cart-item-title{font-weight:600}
+.cart-item-actions .btn{margin-right:6px}
+.btn-close{background:transparent; border:0; font-size:20px}
+.cart-summary{display:flex; justify-content:space-between; align-items:center; margin-bottom:0.5rem}
+
 

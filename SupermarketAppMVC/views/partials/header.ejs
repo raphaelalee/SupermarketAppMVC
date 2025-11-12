@@ -1,0 +1,40 @@
+<!doctype html>
+<nav class="navbar navbar-expand-lg navbar-light bg-white shadow-sm sticky-top">
+  <div class="container py-2">
+    <a class="navbar-brand logo d-flex align-items-center" href="/">
+      <span class="me-2" style="font-size:1.5rem;line-height:1">Supermarket</span>
+    </a>
+
+    <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#mainNav">
+      <span class="navbar-toggler-icon"></span>
+    </button>
+
+    <div class="collapse navbar-collapse" id="mainNav">
+      <ul class="navbar-nav ms-auto align-items-center">
+        <li class="nav-item"><a class="nav-link" href="/shopping">Shop All</a></li>
+        <li class="nav-item"><a class="nav-link" href="#about">About</a></li>
+        <li class="nav-item"><a class="nav-link" href="#contact">Contact</a></li>
+        <% if (!user) { %>
+          <li class="nav-item"><a class="nav-link" href="/register">Register</a></li>
+          <li class="nav-item"><a class="nav-link" href="/login">Log In</a></li>
+        <% } else { %>
+          <% if (user.role === 'admin') { %>
+            <li class="nav-item"><a class="nav-link" href="/inventory">Inventory</a></li>
+          <% } %>
+          <li class="nav-item"><a class="nav-link" href="/logout">Logout</a></li>
+        <% } %>
+        <li class="nav-item ms-3 d-flex align-items-center">
+          <a class="nav-link position-relative" href="#" data-open-cart="true">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden>
+              <path d="M6 6h15l-1.5 9h-12L6 6z" stroke="#2f7a3e" stroke-width="1.2" stroke-linejoin="round" stroke-linecap="round"/>
+              <circle cx="10" cy="19" r="1" fill="#2f7a3e"/>
+              <circle cx="17" cy="19" r="1" fill="#2f7a3e"/>
+            </svg>
+            <span class="cart-count badge bg-white text-success rounded-pill ms-2 px-2"> <%= typeof cartCount !== 'undefined' ? cartCount : 0 %> </span>
+          </a>
+        </li>
+      </ul>
+    </div>
+  </div>
+</nav>
+<%- include('cartDrawer') %>
