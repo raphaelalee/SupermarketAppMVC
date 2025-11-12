@@ -1,41 +1,30 @@
 <%- include('partials/header') %>
+<div class="container py-5" style="max-width:600px;">
+  <h1 class="text-center mb-4">Checkout</h1>
 
-<main class="container py-5">
-  <h1 class="mb-4">Checkout</h1>
-
-  <% if (!cart || cart.length === 0) { %>
-    <div class="alert alert-info">Your cart is empty.</div>
-  <% } else { %>
-    <div class="row">
-      <div class="col-md-8">
-        <ul class="list-group mb-3">
-          <% cart.forEach(item => { %>
-            <li class="list-group-item d-flex justify-content-between align-items-center">
-              <div>
-                <strong><%= item.productName %></strong>
-                <div class="text-muted">Qty: <%= item.quantity %></div>
-              </div>
-              <div>
-                $<%= (item.subtotal || 0).toFixed(2) %>
-              </div>
-            </li>
-          <% }) %>
-        </ul>
+  <div class="card p-4 shadow-sm">
+    <h5>Total Amount: S$ <%= total.toFixed(2) %></h5>
+    <hr>
+    <p>Select a payment method:</p>
+    <form method="POST" action="/checkout">
+      <div class="form-check mb-2">
+        <input class="form-check-input" type="radio" name="payment" value="paynow" id="paynow" checked>
+        <label class="form-check-label" for="paynow">PayNow (UEN: 202412345A)</label>
       </div>
-      <div class="col-md-4">
-        <div class="card">
-          <div class="card-body">
-            <h5>Order summary</h5>
-            <p class="mb-1">Total: <strong>$<%= (total || 0).toFixed(2) %></strong></p>
-            <form action="/checkout" method="post">
-              <button class="btn btn-success w-100">Place order</button>
-            </form>
-          </div>
-        </div>
+      <div class="form-check mb-2">
+        <input class="form-check-input" type="radio" name="payment" value="paylah" id="paylah">
+        <label class="form-check-label" for="paylah">PayLah! / PayAnyone</label>
       </div>
-    </div>
-  <% } %>
+      <div class="form-check mb-2">
+        <input class="form-check-input" type="radio" name="payment" value="card" id="card">
+        <label class="form-check-label" for="card">Credit/Debit Card (Visa / Mastercard)</label>
+      </div>
+      <button type="submit" class="btn btn-success w-100 mt-3">Complete Payment</button>
+    </form>
+  </div>
 
-</main>
-
+  <div class="text-center mt-4">
+    <img src="/images/sg-pay.png" alt="PayNow/PayLah Logos" width="200">
+  </div>
+</div>
 <%- include('partials/footer') %>

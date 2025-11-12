@@ -1,51 +1,63 @@
-<!-- product.ejs -->
+<%- include('partials/header') %>
 
-<!DOCTYPE html>
-<html lang="en">
+<div class="container py-5">
 
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
-  <link rel="stylesheet" href="/css/site.css">
-  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
-  <title>Supermarket</title>
-</head>
+  <a href="/shopping" class="text-secondary text-decoration-none mb-3 d-inline-block">
+    ← Back to shop
+  </a>
 
-<body>
-  <%- include('partials/header') %>
+  <% if (product) { %>
+  <div class="row align-items-center">
 
-  <div class="container">
-    <p>Welcome, <%= user.username %> (<%= user.role %>)</p>
-    <br>
-    <div class="text-center">
-      <h2>Product Details</h2>
-    </div>
-    <br>
-    <% if (product) { %> <!-- Check if product data exists -->
-      <div>
-        <p><b>Product Name:</b><br>
-          <%= product.productName %>
-        </p>
-        <p><b>Product Image:</b><br> <img src="../images/<%= product.image %>" width="20%"></p>
-        <p><b>Product Quantity:</b><br>
-          <%= product.quantity %>
-        </p>
-        <p><b>Price:</b><br> $<%= product.price.toFixed(2) %>
-        </p>
+    <!-- Product Image -->
+    <div class="col-md-5 text-center mb-4 mb-md-0">
+      <div class="p-4 bg-white rounded shadow-sm">
+        <img src="/images/<%= product.image %>" 
+             class="img-fluid" 
+             style="max-height:320px; object-fit:contain;"
+             onerror="this.src='https://via.placeholder.com/300'">
       </div>
+    </div>
+
+    <!-- Product Details -->
+    <div class="col-md-7">
+      <h2 class="fw-bold"><%= product.productName %></h2>
+
+      <p class="text-muted">
+        Availability: <span class="fw-semibold"><%= product.quantity %> in stock</span>
+      </p>
+
+      <h4 class="text-success fw-bold mb-3">$<%= product.price.toFixed(2) %></h4>
+
+      <!-- Add to cart -->
+      <% if (user) { %>
+        <form action="/add-to-cart/<%= product.id %>" method="POST" class="d-flex gap-2 align-items-center">
+          <input type="number" name="quantity" value="1" min="1" class="form-control" style="width:100px;">
+          <button class="btn btn-success px-4">Add to Cart</button>
+        </form>
       <% } else { %>
-        <p>No product found.</p>
-        <% } %>
-          <% if (user.role==="admin" ) { %>
-            <a href="/inventory">Back</a>
-            <% } else { %>
-              <a href="/shopping">Back</a>
-              <% } %>
+        <a href="/login" class="btn btn-outline-secondary px-4">Login to purchase</a>
+      <% } %>
+
+      <!-- Admin Buttons -->
+      <% if (user && user.role === "admin") { %>
+      <div class="mt-4 d-flex gap-2">
+        <a href="/updateProduct/<%= product.id %>" class="btn btn-warning">Edit Product</a>
+        <form action="/products/<%= product.id %>/delete" method="POST" onsubmit="return confirm('Delete this product?')">
+          <button class="btn btn-danger">Delete Product</button>
+        </form>
+      </div>
+      <% } %>
+
+    </div>
+
   </div>
-  <%- include('partials/cartDrawer') %>
-  <%- include('partials/footer') %>
 
-</body>
+  <% } else { %>
+    <div class="alert alert-warning text-center mt-4">
+      No product found.
+    </div>
+  <% } %>
+</div>
 
-</html>
+<%- include('partials/footer') %>

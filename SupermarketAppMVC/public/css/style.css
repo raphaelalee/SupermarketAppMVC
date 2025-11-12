@@ -1,0 +1,87 @@
+/* --- General --- */
+body {
+  font-family: 'Poppins', sans-serif;
+  background-color: #ffffff;
+  color: #222;
+}
+
+a { text-decoration: none; }
+
+/* --- Navbar --- */
+.navbar .nav-link {
+  color: #222 !important;
+  font-weight: 500;
+  transition: color .2s;
+}
+.navbar .nav-link:hover {
+  color: #0f7c43 !important;
+}
+
+/* --- Hero Section --- */
+.hero-section {
+  background: linear-gradient(90deg,#eaf7ea,#ffffff);
+  padding: 5rem 0;
+}
+.hero-section h1 {
+  font-size: 3rem;
+  font-weight: 600;
+  color: #0f7c43;
+}
+.hero-section p {
+  font-size: 1.1rem;
+  color: #555;
+}
+
+/* --- Buttons --- */
+.btn-success {
+  background-color: #0f7c43;
+  border-color: #0f7c43;
+}
+.btn-success:hover {
+  background-color: #0c6839;
+}
+
+/* --- Product Cards --- */
+.product-card {
+  border-radius: 14px;
+  border: none;
+  box-shadow: 0 6px 20px rgba(0,0,0,0.05);
+  transition: all .25s ease;
+}
+.product-card:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 12px 32px rgba(0,0,0,0.08);
+}
+.product-card img {
+  border-radius: 14px 14px 0 0;
+}
+
+/* --- Footer --- */
+footer {
+  background-color: #0f7c43;
+  color: #fff;
+}
+.cart-container {
+  background-color: #fffefb;
+  border-radius: 12px;
+  box-shadow: 0 6px 20px rgba(0,0,0,0.05);
+}
+.table > :not(caption) > * > * {
+  vertical-align: middle;
+}
+.btn-link {
+  text-decoration: none;
+}
+/* Left filter panel look */
+aside ul li a:hover {
+  color: #0f7c43;
+  text-decoration: underline;
+}
+.product-card {
+  border-radius: 12px;
+  transition: transform .2s ease, box-shadow .2s ease;
+}
+.product-card:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 10px 20px rgba(0,0,0,0.08);
+}

@@ -64,7 +64,7 @@ const Users = {
    PRODUCTS MODEL
    ========================= */
 const Product = {
-  // Get all products
+  // ✅ Get all products
   getAll(callback) {
     const sql = 'SELECT * FROM products ORDER BY id';
     db.query(sql, (err, results) => {
@@ -73,7 +73,7 @@ const Product = {
     });
   },
 
-  // Get product by ID
+  // ✅ Get product by ID
   getById(id, callback) {
     const sql = 'SELECT * FROM products WHERE id = ?';
     db.query(sql, [id], (err, results) => {
@@ -82,25 +82,35 @@ const Product = {
     });
   },
 
-  // Add a new product
-  create({ productName, quantity, price, image }, callback) {
-    const sql = 'INSERT INTO products (productName, quantity, price, image) VALUES (?, ?, ?, ?)';
-    db.query(sql, [productName, quantity, price, image], (err, results) => {
+  // ✅ Get products by Category (for your /shopping filter)
+  getByCategory(category, callback) {
+    if (category === 'All') return this.getAll(callback);
+    const sql = 'SELECT * FROM products WHERE category = ? ORDER BY id';
+    db.query(sql, [category], (err, results) => {
       if (err) return callback(err);
       callback(null, results);
     });
   },
 
-  // Update an existing product
-  update(id, { productName, quantity, price, image }, callback) {
-    const sql = 'UPDATE products SET productName = ?, quantity = ?, price = ?, image = ? WHERE id = ?';
-    db.query(sql, [productName, quantity, price, image, id], (err, results) => {
+  // ✅ Add a new product
+  create({ productName, quantity, price, image, category }, callback) {
+    const sql = 'INSERT INTO products (productName, quantity, price, image, category) VALUES (?, ?, ?, ?, ?)';
+    db.query(sql, [productName, quantity, price, image, category], (err, results) => {
       if (err) return callback(err);
       callback(null, results);
     });
   },
 
-  // Delete a product
+  // ✅ Update existing product
+  update(id, { productName, quantity, price, image, category }, callback) {
+    const sql = 'UPDATE products SET productName = ?, quantity = ?, price = ?, image = ?, category = ? WHERE id = ?';
+    db.query(sql, [productName, quantity, price, image, category, id], (err, results) => {
+      if (err) return callback(err);
+      callback(null, results);
+    });
+  },
+
+  // ✅ Delete product
   remove(id, callback) {
     const sql = 'DELETE FROM products WHERE id = ?';
     db.query(sql, [id], (err, results) => {
@@ -109,8 +119,11 @@ const Product = {
     });
   }
 };
-
 /* =========================
    EXPORT BOTH MODELS
    ========================= */
-module.exports = { Users, Product };
+module.exports = {
+  Users,
+  Product
+};
+
