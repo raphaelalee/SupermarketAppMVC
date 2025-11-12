@@ -7,6 +7,12 @@ const methodOverride = require("method-override");
 
 const app = express();
 
+// 🧠 Debugging logger
+app.use((req, res, next) => {
+  console.log(`🟠 ${req.method} ${req.url}`);
+  next();
+});
+
 // View engine
 app.set("views", path.join(__dirname, "views"));
 app.set("view engine", "ejs");
@@ -44,7 +50,7 @@ const UserController = require("./controllers/UserController");
 const CartController = require("./controllers/CartController");
 const CheckoutController = require("./controllers/CheckoutController");
 
-// ============= ROUTES =============
+//routes
 
 // Home
 app.get("/", SupermarketController.homePage);
@@ -72,6 +78,13 @@ app.post("/checkout", CheckoutController.processCheckout);
 // Contact + About
 app.get("/about", (req, res) => res.render("about"));
 app.get("/contact", (req, res) => res.render("contact"));
+
+app.get('/login', UserController.renderLogin);
+app.post('/login', UserController.loginUser);
+
+app.get('/register', UserController.renderRegister);
+app.post('/register', UserController.registerUser);
+app.get('/logout', UserController.logoutUser);
 
 // Server
 const PORT = 3000;
