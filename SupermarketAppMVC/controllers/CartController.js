@@ -37,3 +37,27 @@ exports.removeFromCart = (req, res) => {
   if (req.session.cart && req.session.cart[id]) delete req.session.cart[id];
   res.redirect("/cart");
 };
+
+exports.increaseQuantity = (req, res) => {
+  const id = req.params.id;
+
+  if (!req.session.cart) req.session.cart = {};
+  req.session.cart[id] = (req.session.cart[id] || 1) + 1;
+
+  return res.redirect("/shopping");
+};
+
+exports.decreaseQuantity = (req, res) => {
+  const id = req.params.id;
+
+  if (req.session.cart && req.session.cart[id]) {
+    req.session.cart[id] -= 1;
+
+    // Remove if quantity <= 0
+    if (req.session.cart[id] <= 0) {
+      delete req.session.cart[id];
+    }
+  }
+
+  return res.redirect("/shopping");
+};

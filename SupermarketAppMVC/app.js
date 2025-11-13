@@ -7,7 +7,7 @@ const methodOverride = require("method-override");
 
 const app = express();
 
-// 🧠 Debugging logger
+// Logger
 app.use((req, res, next) => {
   console.log(`🟠 ${req.method} ${req.url}`);
   next();
@@ -22,6 +22,7 @@ app.use(express.static(path.join(__dirname, "public")));
 app.use(express.urlencoded({ extended: false }));
 app.use(express.json());
 app.use(methodOverride("_method"));
+
 app.use(
   session({
     secret: "secret",
@@ -31,18 +32,19 @@ app.use(
 );
 app.use(flash());
 
-// Globals
+// Global variables
 app.use((req, res, next) => {
   res.locals.user = req.session.user || null;
-  res.locals.cart = req.session.cart || {};
-  res.locals.cartCount = Object.keys(res.locals.cart).length;
   res.locals.messages = req.flash("success") || [];
   res.locals.errors = req.flash("error") || [];
   next();
 });
 
-// Models
-const { Product } = require("./models/supermarket");
+app.use((req, res, next) => {
+  const cartObj = req.session.cart || {};
+  res.locals.cartCount = Object.values(cartObj).reduce((a, b) => a + b, 0);
+  next();
+});
 
 // Controllers
 const SupermarketController = require("./controllers/SupermarketController");
@@ -50,7 +52,9 @@ const UserController = require("./controllers/UserController");
 const CartController = require("./controllers/CartController");
 const CheckoutController = require("./controllers/CheckoutController");
 
-//routes
+/* =====================
+      ROUTES 
+===================== */
 
 // Home
 app.get("/", SupermarketController.homePage);
@@ -58,6 +62,12 @@ app.get("/", SupermarketController.homePage);
 // Shopping
 app.get("/shopping", SupermarketController.listAll);
 app.get("/product/:id", SupermarketController.viewProduct);
+
+// Inventory (Admin)
+app.get("/inventory", SupermarketController.inventoryPage);
+app.post("/inventory/add", SupermarketController.addProduct);
+app.post("/inventory/edit/:id", SupermarketController.updateProduct);
+app.post("/inventory/delete/:id", SupermarketController.deleteProduct);
 
 // Auth
 app.get("/login", UserController.renderLogin);
@@ -70,23 +80,20 @@ app.get("/logout", UserController.logoutUser);
 app.post("/add-to-cart/:id", CartController.addToCart);
 app.get("/cart", CartController.viewCart);
 app.post("/cart/remove/:id", CartController.removeFromCart);
+app.post("/cart/increase/:id", CartController.increaseQuantity);
+app.post("/cart/decrease/:id", CartController.decreaseQuantity);
 
 // Checkout
 app.get("/checkout", CheckoutController.renderCheckout);
 app.post("/checkout", CheckoutController.processCheckout);
 
-// Contact + About
+// Pages
 app.get("/about", (req, res) => res.render("about"));
 app.get("/contact", (req, res) => res.render("contact"));
 
-app.get('/login', UserController.renderLogin);
-app.post('/login', UserController.loginUser);
-
-app.get('/register', UserController.renderRegister);
-app.post('/register', UserController.registerUser);
-app.get('/logout', UserController.logoutUser);
-
-// Server
+/* =====================
+      SERVER 
+===================== */
 const PORT = 3000;
 app.listen(PORT, () =>
   console.log(`✅ Server running at http://localhost:${PORT}`)

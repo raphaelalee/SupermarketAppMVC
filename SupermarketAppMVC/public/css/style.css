@@ -56,6 +56,78 @@ a { text-decoration: none; }
   border-radius: 14px 14px 0 0;
 }
 
+/* --- CART DRAWER --- */
+.cart-drawer {
+  position: fixed;
+  top: 0;
+  right: -400px; /* hidden */
+  width: 350px;
+  height: 100vh;
+  background: #fff;
+  box-shadow: -3px 0 10px rgba(0,0,0,0.15);
+  padding: 20px;
+  transition: 0.3s ease-in-out;
+  z-index: 2000;
+  overflow-y: auto;
+}
+
+.cart-drawer.open {
+  right: 0;
+}
+
+/* Overlay */
+.cart-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0,0,0,0.4);
+  opacity: 0;
+  pointer-events: none;
+  transition: 0.3s;
+  z-index: 1500;
+}
+
+.cart-overlay.show {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+/* Cart item styling */
+.cart-item {
+  display: flex;
+  align-items: center;
+  margin-bottom: 15px;
+}
+
+.cart-img {
+  width: 60px;
+  height: 60px;
+  object-fit: contain;
+  margin-right: 10px;
+}
+
+.cart-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.cart-item form {
+  display: inline;
+}
+
+.cart-item button {
+  width: 28px;
+  height: 28px;
+  line-height: 12px;
+  padding: 0;
+  text-align: center;
+}
+
+
+
 /* --- Footer --- */
 footer {
   background-color: #0f7c43;
@@ -85,3 +157,132 @@ aside ul li a:hover {
   transform: translateY(-5px);
   box-shadow: 0 10px 20px rgba(0,0,0,0.08);
 }
+/* Aesthetic Rounded Button */
+.btn-pill {
+  background-color: #0F3D2E;        /* dark green */
+  color: white;
+  padding: 10px 24px;
+  border-radius: 40px;
+  font-weight: 500;
+  border: none;
+  transition: 0.25s ease;
+}
+
+.btn-pill:hover {
+  background-color: #0a2a20;       /* slightly darker */
+  color: #fff;
+  transform: translateY(-1px);
+}
+
+/* Delete Button Variant */
+.btn-pill-danger {
+  background-color: #b3261e;       /* soft red */
+}
+.btn-pill-danger:hover {
+  background-color: #8a1b16;
+}
+
+/* Inventory Admin – Food-store style */
+.inventory-container {
+  margin-top: 60px;
+  padding-bottom: 60px;
+}
+
+/* Grid of product cards */
+.inventory-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  gap: 24px;
+}
+
+/* Product card */
+.inventory-card {
+  background: #fff;
+  border-radius: 16px;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.06);
+  overflow: hidden;
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+.inventory-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 8px 24px rgba(0,0,0,0.08);
+}
+.inventory-card img {
+  width: 100%;
+  height: 180px;
+  object-fit: contain;
+  background: #f9f9f9;
+}
+.inventory-card .info {
+  padding: 16px;
+}
+.inventory-card .info h5 {
+  font-size: 1.1rem;
+  margin-bottom: 8px;
+}
+.inventory-card .info .price {
+  color: #0F3D2E; /* your green accent */
+  font-weight: 600;
+  margin-bottom: 12px;
+}
+.inventory-card .info .category {
+  color: #6c757d;
+  font-size: 0.875rem;
+  margin-bottom: 16px;
+}
+
+/* Action buttons in card */
+.inventory-card .info .actions {
+  display: flex;
+  gap: 8px;
+}
+
+/* Rounded pill button */
+.btn-pill {
+  background-color: #0F3D2E;
+  color: #fff;
+  padding: 8px 22px;
+  border-radius: 30px;
+  border: none;
+  font-size: 0.875rem;
+  font-weight: 500;
+  transition: background-color 0.3s ease, transform 0.3s ease;
+}
+.btn-pill:hover {
+  background-color: #0b2e24;
+  transform: translateY(-2px);
+}
+.btn-outline-pill {
+  background: transparent;
+  color: #0F3D2E;
+  border: 2px solid #0F3D2E;
+}
+.btn-outline-pill:hover {
+  background: #0F3D2E;
+  color: #fff;
+}
+
+/* Delete variant */
+.btn-pill-danger {
+  background-color: #b3261e;
+}
+.btn-pill-danger:hover {
+  background-color: #8a1b16;
+}
+
+/* Add product button top */
+.add-product-btn {
+  display: inline-block;
+  margin-bottom: 24px;
+  background-color: #0F3D2E;
+  color: #fff;
+  padding: 10px 28px;
+  border-radius: 30px;
+  font-size: 1rem;
+  font-weight: 600;
+  transition: background-color 0.3s ease;
+}
+.add-product-btn:hover {
+  background-color: #0b2e24;
+}
+  

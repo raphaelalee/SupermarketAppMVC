@@ -9,5 +9,36 @@
 </footer>
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+  const openBtn = document.getElementById("openCart");
+  const drawer = document.getElementById("cartDrawer");
+  const overlay = document.getElementById("cartOverlay");
+  const closeBtn = document.getElementById("closeCart");
+
+  if (openBtn) {
+    openBtn.onclick = function (e) {
+      e.preventDefault();
+      drawer.classList.add("open");
+      overlay.classList.add("show");
+    };
+  }
+
+  if (closeBtn) {
+    closeBtn.onclick = function () {
+      drawer.classList.remove("open");
+      overlay.classList.remove("show");
+    };
+  }
+
+  if (overlay) {
+    overlay.onclick = function () {
+      drawer.classList.remove("open");
+      overlay.classList.remove("show");
+    };
+  }
+});
+</script>
+
 </body>
 </html>
