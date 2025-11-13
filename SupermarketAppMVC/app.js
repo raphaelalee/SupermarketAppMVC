@@ -7,6 +7,12 @@ const methodOverride = require("method-override");
 
 const app = express();
 
+// Controllers
+const SupermarketController = require("./controllers/SupermarketController");
+const UserController = require("./controllers/UserController");
+const CartController = require("./controllers/CartController");
+const CheckoutController = require("./controllers/CheckoutController");
+
 // Logger
 app.use((req, res, next) => {
   console.log(`🟠 ${req.method} ${req.url}`);
@@ -46,11 +52,25 @@ app.use((req, res, next) => {
   next();
 });
 
-// Controllers
-const SupermarketController = require("./controllers/SupermarketController");
-const UserController = require("./controllers/UserController");
-const CartController = require("./controllers/CartController");
-const CheckoutController = require("./controllers/CheckoutController");
+app.use((req, res, next) => {
+  const cart = req.session.cart || {};
+  const ids = Object.keys(cart);
+
+  res.locals.cartDetailed = [];
+  res.locals.cartTotal = 0;
+  res.locals.cartSummary = { items: [], total: 0, count: 0 };
+
+  if (ids.length === 0) return next();
+
+  CartController.buildCartSnapshot(cart, (err, summary) => {
+    if (!err && summary) {
+      res.locals.cartDetailed = summary.items;
+      res.locals.cartTotal = summary.total;
+      res.locals.cartSummary = summary;
+    }
+    next();
+  });
+});
 
 /* =====================
       ROUTES 
@@ -80,6 +100,7 @@ app.get("/logout", UserController.logoutUser);
 app.post("/add-to-cart/:id", CartController.addToCart);
 app.get("/cart", CartController.viewCart);
 app.post("/cart/remove/:id", CartController.removeFromCart);
+app.post("/cart/update/:id", CartController.updateItemQuantity);
 app.post("/cart/increase/:id", CartController.increaseQuantity);
 app.post("/cart/decrease/:id", CartController.decreaseQuantity);
 

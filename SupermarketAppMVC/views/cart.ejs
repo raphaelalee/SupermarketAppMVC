@@ -1,28 +1,104 @@
 <%- include('partials/header') %>
-<div class="container py-5">
-  <h1>My Cart 🛒</h1>
-  <% if (items.length === 0) { %>
-    <p>Your cart is empty.</p>
-  <% } else { %>
-    <table class="table">
-      <thead><tr><th>Product</th><th>Qty</th><th>Price</th><th>Subtotal</th><th></th></tr></thead>
-      <tbody>
-        <% items.forEach(i => { %>
-          <tr>
-            <td><%= i.productName %></td>
-            <td><%= i.quantity %></td>
-            <td>S$<%= i.price.toFixed(2) %></td>
-            <td>S$<%= i.subtotal.toFixed(2) %></td>
-            <td>
-              <form action="/cart/remove/<%= i.id %>" method="POST">
-                <button class="btn btn-sm btn-outline-danger">Remove</button>
-              </form>
-            </td>
-          </tr>
-        <% }) %>
-      </tbody>
-    </table>
-    <h4 class="text-end">Total: S$<%= total.toFixed(2) %></h4>
-  <% } %>
-</div>
+
+<section class="cart-page-wrap">
+  <div class="container cart-page-grid">
+    <div class="cart-col">
+      <div class="cart-header-row">
+        <div>
+          <p class="text-muted small mb-1">FreshMart</p>
+          <h2>Your basket</h2>
+        </div>
+        <a href="/shopping" class="btn btn-outline-success">Continue Shopping</a>
+      </div>
+
+      <% if (!items.length) { %>
+        <div class="cart-empty-state">
+          <h4>Your cart is empty</h4>
+          <p>Browse our curated catalogue to add groceries, then revisit this page to checkout.</p>
+          <a class="btn btn-success" href="/shopping">Discover Products</a>
+        </div>
+      <% } else { %>
+        <div class="cart-item-list">
+          <% items.forEach(item => { %>
+            <article class="cart-line">
+              <div class="line-media">
+                <img src="/images/<%= item.image || 'broccoli.png' %>" alt="<%= item.productName %>">
+              </div>
+              <div class="line-body">
+                <div class="line-info">
+                  <div>
+                    <h5><%= item.productName %></h5>
+                    <p class="text-muted small mb-1">Category: <%= item.category || 'Groceries' %></p>
+                  </div>
+                  <strong>$<%= Number(item.subtotal).toFixed(2) %></strong>
+                </div>
+                <div class="line-actions">
+                  <form action="/cart/update/<%= item.id %>" method="POST" class="qty-form">
+                    <button type="submit" name="quantity" value="<%= Math.max(0, item.quantity - 1) %>">−</button>
+                    <span><%= item.quantity %></span>
+                    <button type="submit" name="quantity" value="<%= item.quantity + 1 %>">+</button>
+                  </form>
+                  <form action="/cart/remove/<%= item.id %>" method="POST">
+                    <button class="btn btn-link text-danger">Remove</button>
+                  </form>
+                </div>
+              </div>
+            </article>
+          <% }) %>
+        </div>
+      <% } %>
+    </div>
+
+    <aside class="summary-col">
+      <div class="summary-card">
+        <h4>Delivery</h4>
+        <p class="text-muted small mb-3">Choose the option that works best for you.</p>
+        <form class="delivery-options">
+          <label>
+            <input type="radio" name="delivery" value="standard" checked>
+            <div>
+              <strong>Standard Delivery</strong>
+              <span class="text-muted small d-block">2-3 days · $3.50</span>
+            </div>
+            <span>$3.50</span>
+          </label>
+          <label>
+            <input type="radio" name="delivery" value="express">
+            <div>
+              <strong>Express Delivery</strong>
+              <span class="text-muted small d-block">Same day · $6.00</span>
+            </div>
+            <span>$6.00</span>
+          </label>
+          <label>
+            <input type="radio" name="delivery" value="pickup">
+            <div>
+              <strong>Store Pickup</strong>
+              <span class="text-muted small d-block">Collect today · Free</span>
+            </div>
+            <span>$0.00</span>
+          </label>
+        </form>
+      </div>
+
+      <div class="summary-card">
+        <h4>Order Summary</h4>
+        <div class="summary-row">
+          <span>Subtotal</span>
+          <strong>$<%= Number(total || 0).toFixed(2) %></strong>
+        </div>
+        <div class="summary-row">
+          <span>Estimated Delivery</span>
+          <strong>$3.50*</strong>
+        </div>
+        <p class="text-muted small mb-3">*Exact delivery fee calculated at checkout based on option selected.</p>
+        <form action="/checkout" method="get">
+          <button class="btn btn-success w-100" <%= items.length ? '' : 'disabled' %>>Proceed to Checkout</button>
+        </form>
+        <a href="/checkout" class="btn btn-outline-success w-100 mt-2">View Payment Options</a>
+      </div>
+    </aside>
+  </div>
+</section>
+
 <%- include('partials/footer') %>

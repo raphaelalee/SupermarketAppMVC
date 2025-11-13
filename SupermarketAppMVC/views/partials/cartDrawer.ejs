@@ -1,40 +1,41 @@
-<aside id="cart-drawer" class="cart-drawer">
+<% const items = Array.isArray(cartDetailed) ? cartDetailed : []; %>
+<% const totalValue = typeof cartTotal !== "undefined" ? Number(cartTotal) : items.reduce((sum, it) => sum + (it.subtotal || 0), 0); %>
+<% const fallbackCount = items.reduce((sum, it) => sum + (it.quantity || 0), 0); %>
+
+<aside id="cart-drawer" class="cart-drawer" aria-live="polite">
   <div class="cart-header">
-  <h5>Cart (<span id="cart-count"><%= typeof cartCount !== 'undefined' ? cartCount : (typeof cart !== 'undefined' ? Object.keys(cart).length : 0) %></span>)</h5>
-    <button id="cart-close" class="btn-close">✕</button>
+    <h5>Cart (<span id="cart-count" data-cart-count><%= typeof cartCount !== "undefined" ? cartCount : fallbackCount %></span>)</h5>
+    <button id="cart-close" class="btn-close" aria-label="Close cart">&times;</button>
   </div>
 
   <div class="cart-body">
-    <% const items = typeof cartDetailed !== 'undefined' ? cartDetailed : []; %>
-    <% if (items.length === 0) { %>
-      <p class="text-muted">Your cart is empty.</p>
-    <% } else { %>
-      <div class="cart-items">
-        <% items.forEach((it) => { %>
-          <div class="cart-item" data-id="<%= it.id %>">
-            <div class="cart-item-left">
-              <img src="/images/<%= it.image || 'broccoli.png' %>" alt="<%= it.productName %>" class="cart-thumb">
-            </div>
-            <div class="cart-item-right">
-              <div class="cart-item-title"><%= it.productName %></div>
-              <div class="cart-item-meta">Price: $<%= (it.price || 0).toFixed(2) %> &middot; Qty: <span class="cart-item-qty"><%= it.quantity %></span></div>
-              <div class="cart-item-sub">Subtotal: $<%= (it.subtotal || 0).toFixed(2) %></div>
-              <div class="cart-item-actions">
-                <button class="btn btn-sm btn-outline-secondary qty-decrease">−</button>
-                <button class="btn btn-sm btn-outline-secondary qty-increase">+</button>
-                <button class="btn btn-sm btn-link text-danger remove-item">Remove</button>
-              </div>
+    <p class="text-muted <%= items.length ? "d-none" : "" %>" data-cart-empty>Your cart is empty.</p>
+
+    <div class="cart-items <%= items.length ? "" : "d-none" %>" data-cart-items>
+      <% items.forEach((it) => { %>
+        <div class="cart-item" data-id="<%= it.id %>" data-price="<%= Number(it.price || 0).toFixed(2) %>">
+          <div class="cart-item-left">
+            <img src="/images/<%= it.image || "broccoli.png" %>" alt="<%= it.productName %>" class="cart-thumb">
+          </div>
+          <div class="cart-item-right">
+            <div class="cart-item-title"><%= it.productName %></div>
+            <div class="cart-item-meta">Price: $<%= (it.price || 0).toFixed(2) %> &middot; Qty: <span class="cart-item-qty"><%= it.quantity %></span></div>
+            <div class="cart-item-sub">Subtotal: $<%= (it.subtotal || 0).toFixed(2) %></div>
+            <div class="cart-item-actions">
+              <button class="btn btn-sm btn-outline-secondary qty-decrease">-</button>
+              <button class="btn btn-sm btn-outline-secondary qty-increase">+</button>
+              <button class="btn btn-sm btn-link text-danger remove-item">Remove</button>
             </div>
           </div>
-        <% }) %>
-      </div>
-    <% } %>
+        </div>
+      <% }) %>
+    </div>
   </div>
 
   <div class="cart-footer">
     <div class="cart-summary">
       <div>Estimated total</div>
-      <div id="cart-total">$<%= (typeof cartTotal !== 'undefined' ? Number(cartTotal).toFixed(2) : '0.00') %></div>
+      <div id="cart-total">$<%= Number(totalValue || 0).toFixed(2) %></div>
     </div>
     <form action="/checkout" method="get">
       <button id="checkout-btn" class="btn btn-primary w-100">Checkout</button>
@@ -42,5 +43,7 @@
     <a href="/cart" class="btn btn-link w-100 mt-2">View Cart</a>
   </div>
 </aside>
+
+<div class="cart-overlay" id="cart-overlay"></div>
 
 <script src="/js/cart.js" defer></script>

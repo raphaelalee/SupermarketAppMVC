@@ -124,14 +124,56 @@ exports.homePage = (req, res) => {
  * INVENTORY PAGE
  */
 exports.inventoryPage = (req, res) => {
+  const searchQuery = (req.query.search || "").trim();
+  const sortOption = req.query.sort || "newest";
+
   Product.getAll((err, products) => {
     if (err) {
-      return res.render("inventory", { products: [], user: req.session.user || null });
+      return res.render("inventory", {
+        products: [],
+        user: req.session.user || null,
+        searchQuery,
+        sortOption,
+      });
+    }
+
+    let filtered = Array.isArray(products) ? [...products] : [];
+
+    if (searchQuery) {
+      const term = searchQuery.toLowerCase();
+      filtered = filtered.filter(
+        (p) =>
+          (p.productName && p.productName.toLowerCase().includes(term)) ||
+          (p.category && p.category.toLowerCase().includes(term))
+      );
+    }
+
+    switch (sortOption) {
+      case "price-asc":
+        filtered.sort((a, b) => Number(a.price) - Number(b.price));
+        break;
+      case "price-desc":
+        filtered.sort((a, b) => Number(b.price) - Number(a.price));
+        break;
+      case "name-az":
+        filtered.sort((a, b) =>
+          (a.productName || "").localeCompare(b.productName || "")
+        );
+        break;
+      case "name-za":
+        filtered.sort((a, b) =>
+          (b.productName || "").localeCompare(a.productName || "")
+        );
+        break;
+      default:
+        filtered.sort((a, b) => Number(b.id) - Number(a.id)); // newest
     }
 
     res.render("inventory", {
-      products,
-      user: req.session.user || null
+      products: filtered,
+      user: req.session.user || null,
+      searchQuery,
+      sortOption,
     });
   });
 };
