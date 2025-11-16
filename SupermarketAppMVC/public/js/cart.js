@@ -3,7 +3,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const drawer = document.getElementById('cart-drawer');
   if (!drawer) return;
 
-  const openButtons = document.querySelectorAll('[data-open-cart], a[href="/cart"], #openCart');
+  const openButtons = document.querySelectorAll('[data-open-cart], #openCart');
   const closeBtn = document.getElementById('cart-close');
   const itemsContainer = drawer.querySelector('[data-cart-items]');
   const emptyMessage = drawer.querySelector('[data-cart-empty]');

@@ -52,6 +52,14 @@ app.use((req, res, next) => {
   next();
 });
 
+// Simple auth guard for protected pages
+const requireLogin = (req, res, next) => {
+  if (req.session && req.session.user) return next();
+  req.flash("error", "Please log in to continue.");
+  req.session.returnTo = req.originalUrl;
+  return res.redirect("/login");
+};
+
 app.use((req, res, next) => {
   const cart = req.session.cart || {};
   const ids = Object.keys(cart);
@@ -105,16 +113,15 @@ app.post("/cart/increase/:id", CartController.increaseQuantity);
 app.post("/cart/decrease/:id", CartController.decreaseQuantity);
 
 // Checkout
-app.get("/checkout", CheckoutController.renderCheckout);
-app.post("/checkout", CheckoutController.processCheckout);
+app.get("/checkout", requireLogin, CheckoutController.renderCheckout);
+app.post("/checkout", requireLogin, CheckoutController.processCheckout);
+app.get("/order/:orderNumber", requireLogin, CheckoutController.renderReceipt);
 
 // Pages
 app.get("/about", (req, res) => res.render("about"));
 app.get("/contact", (req, res) => res.render("contact"));
 
-/* =====================
-      SERVER 
-===================== */
+// start server
 const PORT = 3000;
 app.listen(PORT, () =>
   console.log(`✅ Server running at http://localhost:${PORT}`)

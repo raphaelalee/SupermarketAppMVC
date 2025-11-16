@@ -1,0 +1,72 @@
+<%- include('partials/header') %>
+
+<section class="receipt-hero container">
+  <div class="receipt-head">
+    <div>
+      <p class="text-muted mb-1">Thank you</p>
+      <h1>Order confirmed</h1>
+      <p class="lead text-muted mb-0">Your items are being prepared. Below is your receipt.</p>
+      <p class="small text-muted mt-2">Order: <%= order.orderNumber %></p>
+    </div>
+    <div class="receipt-total-card">
+      <p class="text-muted small mb-1">Total paid</p>
+      <h3 class="mb-2">S$ <%= Number(order.total || 0).toFixed(2) %></h3>
+      <span class="pill">Payment: <%= order.paymentMethod %></span>
+    </div>
+  </div>
+</section>
+
+<section class="receipt-grid container">
+  <div class="receipt-card">
+    <div class="receipt-section">
+      <h6 class="text-muted mb-2">Items</h6>
+      <ul class="list-unstyled receipt-items">
+        <% items.forEach((it) => { %>
+          <li class="receipt-line">
+            <div>
+              <strong><%= it.name %></strong>
+              <p class="text-muted small mb-0">Qty: <%= it.quantity %> · S$ <%= Number(it.price).toFixed(2) %> each</p>
+            </div>
+            <div class="fw-semibold">S$ <%= Number(it.subtotal || 0).toFixed(2) %></div>
+          </li>
+        <% }) %>
+      </ul>
+    </div>
+
+    <div class="divider my-3"></div>
+
+    <div class="summary-row">
+      <span>Subtotal</span>
+      <strong>S$ <%= Number(order.subtotal || 0).toFixed(2) %></strong>
+    </div>
+    <div class="summary-row">
+      <span>Delivery (<%= order.deliveryMethod %>)</span>
+      <strong>S$ <%= Number(order.deliveryFee || 0).toFixed(2) %></strong>
+    </div>
+    <hr>
+    <div class="summary-row total-row">
+      <span>Total</span>
+      <strong>S$ <%= Number(order.total || 0).toFixed(2) %></strong>
+    </div>
+
+    <p class="small text-muted mt-3 mb-0">Placed at <%= new Date(order.createdAt || Date.now()).toLocaleString() %></p>
+  </div>
+
+  <div class="receipt-side">
+    <div class="mini-card">
+      <p class="fw-semibold mb-1">Delivery</p>
+      <p class="text-muted small mb-2">Method: <%= order.deliveryMethod %></p>
+      <p class="text-muted small mb-0">We’ll email you when it’s on the way.</p>
+    </div>
+    <div class="mini-card text-center">
+      <img src="/images/sg-pay.png" alt="Payment methods" width="140">
+      <p class="small text-muted mt-2 mb-0">We accept PayNow, PayLah!, and major cards.</p>
+    </div>
+    <div class="d-grid gap-2 receipt-actions">
+      <button class="btn btn-outline-secondary" onclick="window.print()">Download / Print receipt</button>
+      <a href="/shopping" class="btn btn-success">Back to shopping</a>
+    </div>
+  </div>
+</section>
+
+<%- include('partials/footer') %>

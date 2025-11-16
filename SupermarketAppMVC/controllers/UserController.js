@@ -66,6 +66,13 @@ exports.registerUser = (req, res) => {
    RENDER LOGIN PAGE
 ======================================== */
 exports.renderLogin = (req, res) => {
+  // Clear any stale return path unless explicitly provided
+  if (req.query.next) {
+    req.session.returnTo = req.query.next;
+  } else {
+    delete req.session.returnTo;
+  }
+
   res.render("login", {
     messages: req.flash("error"),
     success: req.flash("success")
@@ -108,12 +115,12 @@ exports.loginUser = (req, res) => {
 
     req.flash("success", "Welcome back, " + user.username + "!");
 
-    // Redirect based on role
-    if (user.role === "admin") {
-      return res.redirect("/inventory");
-    }
+    const redirectTo =
+      req.session.returnTo ||
+      (user.role === "admin" ? "/inventory" : "/shopping");
+    delete req.session.returnTo;
 
-    res.redirect("/shopping");
+    return res.redirect(redirectTo);
   });
 };
 

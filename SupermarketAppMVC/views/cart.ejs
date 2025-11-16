@@ -8,13 +8,13 @@
           <p class="text-muted small mb-1">FreshMart</p>
           <h2>Your basket</h2>
         </div>
-        <a href="/shopping" class="btn btn-outline-success">Continue Shopping</a>
+        <a href="/shopping" class="btn btn-outline-success btn-pill-sm">Continue Shopping</a>
       </div>
 
       <% if (!items.length) { %>
         <div class="cart-empty-state">
           <h4>Your cart is empty</h4>
-          <p>Browse our curated catalogue to add groceries, then revisit this page to checkout.</p>
+          <p class="text-muted mb-3">Browse our curated catalogue to add groceries, then revisit this page to checkout.</p>
           <a class="btn btn-success" href="/shopping">Discover Products</a>
         </div>
       <% } else { %>
@@ -34,7 +34,7 @@
                 </div>
                 <div class="line-actions">
                   <form action="/cart/update/<%= item.id %>" method="POST" class="qty-form">
-                    <button type="submit" name="quantity" value="<%= Math.max(0, item.quantity - 1) %>">−</button>
+                    <button type="submit" name="quantity" value="<%= Math.max(0, item.quantity - 1) %>">-</button>
                     <span><%= item.quantity %></span>
                     <button type="submit" name="quantity" value="<%= item.quantity + 1 %>">+</button>
                   </form>
@@ -58,7 +58,7 @@
             <input type="radio" name="delivery" value="standard" checked>
             <div>
               <strong>Standard Delivery</strong>
-              <span class="text-muted small d-block">2-3 days · $3.50</span>
+              <span class="text-muted small d-block">2-3 days &middot; $3.50</span>
             </div>
             <span>$3.50</span>
           </label>
@@ -66,7 +66,7 @@
             <input type="radio" name="delivery" value="express">
             <div>
               <strong>Express Delivery</strong>
-              <span class="text-muted small d-block">Same day · $6.00</span>
+              <span class="text-muted small d-block">Same day &middot; $6.00</span>
             </div>
             <span>$6.00</span>
           </label>
@@ -74,7 +74,7 @@
             <input type="radio" name="delivery" value="pickup">
             <div>
               <strong>Store Pickup</strong>
-              <span class="text-muted small d-block">Collect today · Free</span>
+              <span class="text-muted small d-block">Collect today &middot; Free</span>
             </div>
             <span>$0.00</span>
           </label>
@@ -92,10 +92,16 @@
           <strong>$3.50*</strong>
         </div>
         <p class="text-muted small mb-3">*Exact delivery fee calculated at checkout based on option selected.</p>
-        <form action="/checkout" method="get">
-          <button class="btn btn-success w-100" <%= items.length ? '' : 'disabled' %>>Proceed to Checkout</button>
+        <% const isLoggedIn = !!user; const hasItems = items.length > 0; %>
+        <form action="<%= isLoggedIn ? '/checkout' : '/login' %>" method="get">
+          <button class="btn btn-success w-100" <%= hasItems ? '' : 'disabled' %>><%= isLoggedIn ? 'Proceed to Checkout' : 'Log in to Checkout' %></button>
         </form>
-        <a href="/checkout" class="btn btn-outline-success w-100 mt-2">View Payment Options</a>
+        <% if (isLoggedIn) { %>
+          <a href="/checkout" class="btn btn-outline-success w-100 mt-2">View Payment Options</a>
+        <% } else { %>
+          <a href="/register" class="btn btn-outline-success w-100 mt-2">Create an Account</a>
+          <p class="text-muted small mt-2">Please log in or sign up before completing your purchase.</p>
+        <% } %>
       </div>
     </aside>
   </div>

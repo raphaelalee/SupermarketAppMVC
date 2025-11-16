@@ -1,23 +1,5 @@
 <%- include('partials/header') %>
 
-<section class="shopping-hero">
-  <div class="hero-inner container">
-    <div class="hero-copy">
-      <p class="hero-kicker">FreshMart</p>
-      <h1><%= category === 'All' ? 'Quality Groceries, Delivered Simply' : category + ' Favourites' %></h1>
-      <p>
-        Browse our handpicked selection of seasonal produce, pantry staples, and daily essentials.
-        Thoughtfully sourced, beautifully packed, and delivered right to your doorstep across Singapore.
-      </p>
-      <div class="hero-actions">
-        <a href="/shopping" class="btn btn-success px-4">Shop All</a>
-        <a href="/about" class="btn btn-outline-success px-4">Our Story</a>
-      </div>
-    </div>
-    <div class="hero-art"></div>
-  </div>
-</section>
-
 <section class="shopping-wrapper container">
   <aside class="filter-card">
     <div class="filter-header">
@@ -34,15 +16,6 @@
         </li>
       <% }) %>
     </ul>
-
-    <div class="price-filter">
-      <p class="text-muted small mb-1">Filter by price</p>
-      <input type="range" class="form-range" min="1" max="100" value="40">
-      <div class="d-flex justify-content-between small text-muted">
-        <span>$1</span>
-        <span>$100</span>
-      </div>
-    </div>
   </aside>
 
   <div class="products-panel">
@@ -50,19 +23,26 @@
       <div>
         <p class="text-muted small mb-1">
           <a href="/" class="text-decoration-none text-success">Home</a>
-          <span class="mx-2">›</span>
-          <span><%= category === 'All' ? 'All Products' : category %></span>
+          <span class="mx-2">></span>
+          <span><%= displayCategory %></span>
         </p>
-        <h2><%= category === 'All' ? 'All Products' : category %></h2>
+        <h2><%= displayCategory %></h2>
       </div>
-      <div class="sort-control">
-        <label for="sortOptions" class="text-muted small me-2">Sort</label>
-        <select id="sortOptions" class="form-select">
-          <option>Recommended</option>
-          <option>Price: Low to High</option>
-          <option>Price: High to Low</option>
-        </select>
-      </div>
+      <form class="d-flex align-items-center gap-2" action="/shopping" method="get">
+        <input
+          type="text"
+          class="form-control"
+          name="search"
+          placeholder="Search products or categories..."
+          value="<%= searchTerm %>">
+        <% if (category && category !== 'All') { %>
+          <input type="hidden" name="category" value="<%= category %>">
+        <% } %>
+        <button class="btn btn-success" type="submit">Search</button>
+        <% if (searchTerm) { %>
+          <a href="/shopping" class="btn btn-outline-secondary">Clear</a>
+        <% } %>
+      </form>
     </div>
 
     <% if (products && products.length > 0) { %>
@@ -85,7 +65,7 @@
     <% } else { %>
       <div class="empty-state">
         <h4>Nothing to show yet</h4>
-        <p>We couldn't find any products in this category. Try another filter or browse all products.</p>
+        <p>We couldn't find any products that match those categories. Try another search or browse all products.</p>
         <a href="/shopping" class="btn btn-success">View All Products</a>
       </div>
     <% } %>

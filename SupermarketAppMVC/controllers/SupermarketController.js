@@ -1,65 +1,89 @@
 // controllers/SupermarketController.js
 
-const Product = require("../models/supermarket");   // IMPORT MODEL
+const Product = require("../models/supermarket"); // IMPORT MODEL
 
 /**
  * SHOPPING PAGE + CART
  */
 exports.listAll = (req, res) => {
-  const category = req.query.category || "All";
-  const categories = ["All", "Dairy", "Meat", "Produce", "Pantry", "Drinks"];
+  const category = (req.query.category || "All").trim();
+  const searchTermRaw = req.query.search || "";
+  const searchTerm = searchTermRaw.trim().toLowerCase();
 
-  Product.getByCategory(category, (err, products) => {
+  Product.getAll((err, allProducts) => {
     if (err) {
       return res.render("shopping", {
         products: [],
         category,
-        categories,
+        displayCategory: "All Products",
+        categories: ["All"],
+        searchTerm: searchTermRaw,
         user: req.session.user || null,
         cart: [],
         total: 0,
-        cartCount: 0
+        cartCount: 0,
       });
     }
+
+    const categories = ["All"];
+    const categorySet = new Set();
+    allProducts.forEach((p) => {
+      const raw = (p.category || "").trim();
+      if (!raw) return;
+      const key = raw.toLowerCase();
+      if (categorySet.has(key)) return;
+      categorySet.add(key);
+      categories.push(raw.charAt(0).toUpperCase() + raw.slice(1));
+    });
+
+    let filtered = Array.isArray(allProducts) ? [...allProducts] : [];
+
+    if (searchTerm) {
+      filtered = filtered.filter((p) => {
+        const name = (p.productName || "").toLowerCase();
+        const cat = (p.category || "").toLowerCase();
+        return name.includes(searchTerm) || cat.includes(searchTerm);
+      });
+    } else if (category && category !== "All") {
+      filtered = filtered.filter(
+        (p) => (p.category || "").toLowerCase() === category.toLowerCase()
+      );
+    }
+
+    const displayCategory = searchTerm
+      ? `Search: ${searchTermRaw}`
+      : category === "All"
+      ? "All Products"
+      : category;
 
     const cartObj = req.session.cart || {};
     const cartIds = Object.keys(cartObj);
 
     if (cartIds.length === 0) {
       return res.render("shopping", {
-        products,
+        products: filtered,
         category,
+        displayCategory,
         categories,
+        searchTerm: searchTermRaw,
         user: req.session.user || null,
         cart: [],
         total: 0,
-        cartCount: 0
+        cartCount: 0,
       });
     }
 
-    // cart has items → load product data
-    Product.getAll((err2, allProducts) => {
-      if (err2) {
-        return res.render("shopping", {
-          products,
-          category,
-          categories,
-          user: req.session.user || null,
-          cart: [],
-          total: 0,
-          cartCount: 0
-        });
-      }
+    const byId = {};
+    allProducts.forEach((p) => (byId[p.id] = p));
 
-      const byId = {};
-      allProducts.forEach(p => (byId[p.id] = p));
+    let cartItems = [];
+    let total = 0;
+    let cartCount = 0;
 
-      let cartItems = [];
-      let total = 0;
-      let cartCount = 0;
-
-      cartItems = cartIds.map(id => {
+    cartItems = cartIds
+      .map((id) => {
         const item = byId[id];
+        if (!item) return null;
         const quantity = cartObj[id];
         const subtotal = item.price * quantity;
 
@@ -67,21 +91,22 @@ exports.listAll = (req, res) => {
         cartCount += quantity;
 
         return { ...item, quantity, subtotal };
-      });
+      })
+      .filter(Boolean);
 
-      res.render("shopping", {
-        products,
-        category,
-        categories,
-        user: req.session.user || null,
-        cart: cartItems,
-        total,
-        cartCount
-      });
+    res.render("shopping", {
+      products: filtered,
+      category,
+      displayCategory,
+      categories,
+      searchTerm: searchTermRaw,
+      user: req.session.user || null,
+      cart: cartItems,
+      total,
+      cartCount,
     });
   });
 };
-
 
 /**
  * PRODUCT DETAILS PAGE
@@ -95,11 +120,10 @@ exports.viewProduct = (req, res) => {
 
     res.render("productdetail", {
       product: results[0],
-      user: req.session.user || null
+      user: req.session.user || null,
     });
   });
 };
-
 
 /**
  * HOME PAGE
@@ -114,11 +138,10 @@ exports.homePage = (req, res) => {
 
     res.render("index", {
       featured,
-      user: req.session.user || null
+      user: req.session.user || null,
     });
   });
 };
-
 
 /**
  * INVENTORY PAGE
@@ -178,7 +201,6 @@ exports.inventoryPage = (req, res) => {
   });
 };
 
-
 /**
  * ADD PRODUCT
  */
@@ -195,7 +217,6 @@ exports.addProduct = (req, res) => {
     res.redirect("/inventory");
   });
 };
-
 
 /**
  * UPDATE PRODUCT
@@ -214,7 +235,6 @@ exports.updateProduct = (req, res) => {
     res.redirect("/inventory");
   });
 };
-
 
 /**
  * DELETE PRODUCT

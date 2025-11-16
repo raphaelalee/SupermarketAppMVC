@@ -10,7 +10,11 @@ SearchController.searchProducts = function (req, res) {
 			console.error('Search error:', err);
 			return res.status(500).send('Error searching products');
 		}
-		const filtered = results.filter(p => (p.productName || '').toLowerCase().includes(q));
+		const filtered = results.filter(p => {
+			const name = (p.productName || '').toLowerCase();
+			const cat = (p.category || '').toLowerCase();
+			return name.includes(q) || cat.includes(q);
+		});
 		res.render('shopping', { products: filtered, user: req.session.user });
 	});
 };
