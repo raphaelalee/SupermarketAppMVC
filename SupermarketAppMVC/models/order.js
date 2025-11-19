@@ -9,6 +9,8 @@ function createOrder(order, items, callback) {
     total = 0,
     deliveryMethod = "standard",
     paymentMethod = "paynow",
+    paid = true,
+    createdAt = null,
   } = order;
 
   const payload = [
@@ -65,6 +67,25 @@ function getOrderByNumber(orderNumber, callback) {
   );
 }
 
+function listAllWithUsers(callback) {
+  const sql = `
+    SELECT 
+      o.*,
+      u.username AS customerName,
+      COUNT(oi.id) AS itemsCount
+    FROM orders o
+    LEFT JOIN users u ON u.id = o.userId
+    LEFT JOIN order_items oi ON oi.orderId = o.id
+    GROUP BY o.id
+    ORDER BY o.id DESC
+  `;
+
+  db.query(sql, (err, rows) => {
+    if (err) return callback(err);
+    callback(null, rows || []);
+  });
+}
+
 function getItemsByOrderId(orderId, callback) {
   db.query(
     "SELECT * FROM order_items WHERE orderId = ?",
@@ -80,4 +101,5 @@ module.exports = {
   createOrder,
   getOrderByNumber,
   getItemsByOrderId,
+  listAllWithUsers,
 };

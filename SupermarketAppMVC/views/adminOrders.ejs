@@ -1,0 +1,60 @@
+<%- include('partials/header') %>
+
+<section class="container py-4">
+  <h1 class="h3 mb-4 fw-semibold">Orders and Payments</h1>
+  <p class="text-muted small mb-3">Admin view of all checkouts (similar to fines list) with totals and paid status.</p>
+
+  <% if ((errors && errors.length) || (messages && messages.length)) { %>
+    <div class="mb-3">
+      <% (errors || []).forEach(msg => { %>
+        <div class="alert alert-danger py-2 mb-2"><%= msg %></div>
+      <% }) %>
+      <% (messages || []).forEach(msg => { %>
+        <div class="alert alert-success py-2 mb-2"><%= msg %></div>
+      <% }) %>
+    </div>
+  <% } %>
+
+  <div class="table-responsive shadow-sm border rounded">
+    <table class="table align-middle mb-0">
+      <thead class="table-light">
+        <tr>
+          <th scope="col">Customer Name</th>
+          <th scope="col">Order #</th>
+          <th scope="col">Items</th>
+          <th scope="col">Total</th>
+          <th scope="col">Payment Method</th>
+          <th scope="col">Paid</th>
+          <th scope="col">Placed At</th>
+        </tr>
+      </thead>
+      <tbody>
+        <% if (!orders || !orders.length) { %>
+          <tr>
+            <td colspan="7" class="text-center text-muted py-4">No orders yet.</td>
+          </tr>
+        <% } else { %>
+          <% orders.forEach(o => { %>
+            <tr>
+              <td class="fw-semibold"><%= o.customerName %></td>
+              <td><%= o.orderNumber %></td>
+              <td><%= o.itemsCount %></td>
+              <td>S$ <%= Number(o.total || 0).toFixed(2) %></td>
+              <td class="text-capitalize"><%= o.paymentMethod %></td>
+              <td>
+                <% if (o.paid) { %>
+                  <span class="badge text-bg-success-subtle text-success fw-semibold">Yes</span>
+                <% } else { %>
+                  <span class="badge text-bg-warning-subtle text-warning fw-semibold">No</span>
+                <% } %>
+              </td>
+              <td><%= o.displayDate || "-" %></td>
+            </tr>
+          <% }) %>
+        <% } %>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<%- include('partials/footer') %>

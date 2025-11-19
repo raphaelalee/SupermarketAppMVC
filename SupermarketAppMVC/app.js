@@ -12,10 +12,11 @@ const SupermarketController = require("./controllers/SupermarketController");
 const UserController = require("./controllers/UserController");
 const CartController = require("./controllers/CartController");
 const CheckoutController = require("./controllers/CheckoutController");
+const AdminController = require("./controllers/AdminController");
 
 // Logger
 app.use((req, res, next) => {
-  console.log(`🟠 ${req.method} ${req.url}`);
+  console.log(` ${req.method} ${req.url}`);
   next();
 });
 
@@ -56,6 +57,13 @@ app.use((req, res, next) => {
 const requireLogin = (req, res, next) => {
   if (req.session && req.session.user) return next();
   req.flash("error", "Please log in to continue.");
+  req.session.returnTo = req.originalUrl;
+  return res.redirect("/login");
+};
+
+const requireAdmin = (req, res, next) => {
+  if (req.session?.user?.role === "admin") return next();
+  req.flash("error", "Admin access required.");
   req.session.returnTo = req.originalUrl;
   return res.redirect("/login");
 };
@@ -117,6 +125,9 @@ app.get("/checkout", requireLogin, CheckoutController.renderCheckout);
 app.post("/checkout", requireLogin, CheckoutController.processCheckout);
 app.get("/order/:orderNumber", requireLogin, CheckoutController.renderReceipt);
 
+// Admin
+app.get("/admin/orders", requireLogin, requireAdmin, AdminController.ordersDashboard);
+
 // Pages
 app.get("/about", (req, res) => res.render("about"));
 app.get("/contact", (req, res) => res.render("contact"));
@@ -124,5 +135,5 @@ app.get("/contact", (req, res) => res.render("contact"));
 // start server
 const PORT = 3000;
 app.listen(PORT, () =>
-  console.log(`✅ Server running at http://localhost:${PORT}`)
+  console.log(`Server running at http://localhost:${PORT}`)
 );

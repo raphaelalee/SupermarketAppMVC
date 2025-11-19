@@ -1,4 +1,5 @@
 // controllers/CheckoutController.js (session-based, no DB)
+const Order = require("../models/order");
 
 exports.renderCheckout = (req, res) => {
   const cart = req.session.cart || {};
@@ -31,15 +32,25 @@ exports.processCheckout = (req, res) => {
     total,
     deliveryMethod,
     paymentMethod,
+    paid: true, // We treat completed checkout as paid
     createdAt: new Date().toISOString(),
     items,
   };
 
-  // Store order in session for receipt (no DB)
-  req.session.lastOrder = orderPayload;
-  req.session.cart = {}; // Clear cart
-  req.flash("success", "Order placed successfully!");
-  res.redirect(`/order/${orderNumber}`);
+  Order.createOrder(orderPayload, items, (err, orderId) => {
+    if (err) {
+      console.error("Failed to persist order:", err);
+      req.flash("error", "Order placed but not saved to admin dashboard.");
+    } else if (orderId) {
+      orderPayload.id = orderId;
+    }
+
+    // Store order in session for receipt
+    req.session.lastOrder = orderPayload;
+    req.session.cart = {}; // Clear cart
+    req.flash("success", "Order placed successfully!");
+    res.redirect(`/order/${orderNumber}`);
+  });
 };
 
 exports.renderReceipt = (req, res) => {
