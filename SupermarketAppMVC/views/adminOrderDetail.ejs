@@ -1,0 +1,126 @@
+<%- include('partials/header') %>
+
+<section class="container py-4">
+  <div class="d-flex justify-content-between align-items-center flex-wrap gap-3 mb-3">
+    <div>
+      <a href="/admin/orders" class="text-decoration-none small text-muted">&larr; Back to orders</a>
+      <h1 class="h4 fw-semibold mt-2 mb-0">Order <%= order.orderNumber %></h1>
+      <p class="text-muted small mb-0">Placed <%= order.displayDate || '-' %></p>
+    </div>
+    <div class="d-flex gap-2">
+      <a class="btn btn-outline-secondary" href="/admin/orders/<%= order.id %>/receipt" target="_blank">
+        <i class="bi bi-file-earmark-arrow-down me-1"></i>Download receipt
+      </a>
+      <span class="badge bg-dark-subtle text-dark fw-semibold text-uppercase align-self-center">
+        <%= order.status.charAt(0).toUpperCase() + order.status.slice(1) %>
+      </span>
+    </div>
+  </div>
+
+  <% if ((errors && errors.length) || (messages && messages.length)) { %>
+    <div class="mb-3">
+      <% (errors || []).forEach(msg => { %>
+        <div class="alert alert-danger py-2 mb-2"><%= msg %></div>
+      <% }) %>
+      <% (messages || []).forEach(msg => { %>
+        <div class="alert alert-success py-2 mb-2"><%= msg %></div>
+      <% }) %>
+    </div>
+  <% } %>
+
+  <div class="row g-3 mb-4">
+    <div class="col-md-4">
+      <div class="card shadow-sm border-0 h-100">
+        <div class="card-body">
+          <p class="text-muted small text-uppercase mb-1">Customer</p>
+          <h5 class="mb-1"><%= order.customerName || 'Guest checkout' %></h5>
+          <p class="mb-0 small text-muted"><%= order.customerEmail || 'No email on file' %></p>
+          <p class="mb-0 small text-muted"><%= order.customerPhone || 'No phone on file' %></p>
+        </div>
+      </div>
+    </div>
+    <div class="col-md-4">
+      <div class="card shadow-sm border-0 h-100">
+        <div class="card-body">
+          <p class="text-muted small text-uppercase mb-1">Payment</p>
+          <h5 class="mb-1 text-capitalize"><%= order.paymentMethod %></h5>
+          <p class="mb-0 small text-muted">Delivery: <%= order.deliveryMethod %></p>
+        </div>
+      </div>
+    </div>
+    <div class="col-md-4">
+      <div class="card shadow-sm border-0 h-100">
+        <div class="card-body">
+          <p class="text-muted small text-uppercase mb-1">Order total</p>
+          <h5 class="mb-1">S$ <%= Number(order.total || 0).toFixed(2) %></h5>
+          <p class="mb-0 small text-muted">
+            Subtotal S$ <%= Number(order.subtotal || 0).toFixed(2) %> &middot;
+            Delivery S$ <%= Number(order.deliveryFee || 0).toFixed(2) %>
+          </p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card shadow-sm border-0 mb-4">
+    <div class="card-body">
+      <h5 class="card-title mb-3">Status timeline</h5>
+      <div class="d-flex flex-wrap gap-3">
+        <% timeline.forEach(step => { %>
+          <div class="d-flex align-items-center gap-2">
+            <span class="badge <%= step.complete ? 'bg-success-subtle text-success' : 'bg-light text-muted' %>">
+              <%= step.label %>
+            </span>
+            <% if (step.value !== timeline[timeline.length - 1].value) { %>
+              <i class="bi bi-arrow-right text-muted"></i>
+            <% } %>
+          </div>
+        <% }) %>
+      </div>
+      <form action="/admin/orders/<%= order.id %>/status" method="POST" class="mt-3 d-flex flex-wrap gap-2">
+        <select class="form-select" name="status" style="max-width:220px">
+          <% statuses.forEach(value => { %>
+            <option value="<%= value %>" <%= order.status === value ? 'selected' : '' %>>
+              <%= value.charAt(0).toUpperCase() + value.slice(1) %>
+            </option>
+          <% }) %>
+        </select>
+        <button class="btn btn-success">Update status</button>
+      </form>
+    </div>
+  </div>
+
+  <div class="card shadow-sm border-0">
+    <div class="card-body">
+      <h5 class="card-title mb-3">Items (<%= items.length %>)</h5>
+      <% if (!items.length) { %>
+        <p class="text-muted small mb-0">No items stored for this order.</p>
+      <% } else { %>
+        <div class="table-responsive">
+          <table class="table">
+            <thead>
+              <tr>
+                <th>Name</th>
+                <th class="text-end">Price</th>
+                <th class="text-center">Qty</th>
+                <th class="text-end">Subtotal</th>
+              </tr>
+            </thead>
+            <tbody>
+              <% items.forEach(item => { %>
+                <tr>
+                  <td><%= item.name %></td>
+                  <td class="text-end">S$ <%= Number(item.price || 0).toFixed(2) %></td>
+                  <td class="text-center"><%= item.quantity %></td>
+                  <td class="text-end">S$ <%= Number(item.subtotal || 0).toFixed(2) %></td>
+                </tr>
+              <% }) %>
+            </tbody>
+          </table>
+        </div>
+      <% } %>
+    </div>
+  </div>
+</section>
+
+<%- include('partials/footer') %>

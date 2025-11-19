@@ -40,5 +40,35 @@ module.exports = {
 
   delete(id, callback) {
     db.query("DELETE FROM products WHERE id = ?", [id], callback);
-  }
+  },
+
+  countAll(callback) {
+    db.query("SELECT COUNT(*) AS totalProducts FROM products", (err, rows) => {
+      if (err) return callback(err);
+      const total = rows && rows[0] ? rows[0].totalProducts : 0;
+      callback(null, total);
+    });
+  },
+
+  getLowStock(threshold = 10, limit = 5, callback) {
+    const safeThreshold =
+      Number.isFinite(Number(threshold)) && Number(threshold) >= 0
+        ? Number(threshold)
+        : 10;
+    const safeLimit =
+      Number.isFinite(Number(limit)) && Number(limit) > 0 ? Number(limit) : 5;
+
+    db.query(
+      `SELECT id, productName, COALESCE(quantity, 0) AS quantity
+       FROM products
+       WHERE COALESCE(quantity, 0) <= ?
+       ORDER BY COALESCE(quantity, 0) ASC, productName ASC
+       LIMIT ?`,
+      [safeThreshold, safeLimit],
+      (err, rows) => {
+        if (err) return callback(err);
+        callback(null, rows || []);
+      }
+    );
+  },
 };

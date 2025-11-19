@@ -49,7 +49,12 @@ app.use((req, res, next) => {
 
 app.use((req, res, next) => {
   const cartObj = req.session.cart || {};
-  res.locals.cartCount = Object.values(cartObj).reduce((a, b) => a + b, 0);
+  res.locals.cartCount = Object.values(cartObj).reduce((count, entry) => {
+    if (typeof entry === "object" && entry !== null) {
+      return count + (parseInt(entry.quantity, 10) || 0);
+    }
+    return count + (parseInt(entry, 10) || 0);
+  }, 0);
   next();
 });
 
@@ -101,8 +106,16 @@ app.get("/product/:id", SupermarketController.viewProduct);
 
 // Inventory (Admin)
 app.get("/inventory", SupermarketController.inventoryPage);
-app.post("/inventory/add", SupermarketController.addProduct);
-app.post("/inventory/edit/:id", SupermarketController.updateProduct);
+app.post(
+  "/inventory/add",
+  SupermarketController.handleProductImageUpload,
+  SupermarketController.addProduct
+);
+app.post(
+  "/inventory/edit/:id",
+  SupermarketController.handleProductImageUpload,
+  SupermarketController.updateProduct
+);
 app.post("/inventory/delete/:id", SupermarketController.deleteProduct);
 
 // Auth
@@ -119,6 +132,7 @@ app.post("/cart/remove/:id", CartController.removeFromCart);
 app.post("/cart/update/:id", CartController.updateItemQuantity);
 app.post("/cart/increase/:id", CartController.increaseQuantity);
 app.post("/cart/decrease/:id", CartController.decreaseQuantity);
+app.post("/cart/clear", CartController.clearCart);
 
 // Checkout
 app.get("/checkout", requireLogin, CheckoutController.renderCheckout);
@@ -127,10 +141,29 @@ app.get("/order/:orderNumber", requireLogin, CheckoutController.renderReceipt);
 
 // Admin
 app.get("/admin/orders", requireLogin, requireAdmin, AdminController.ordersDashboard);
+app.get(
+  "/admin/orders/:id",
+  requireLogin,
+  requireAdmin,
+  AdminController.viewOrder
+);
+app.post(
+  "/admin/orders/:id/status",
+  requireLogin,
+  requireAdmin,
+  AdminController.updateOrderStatus
+);
+app.get(
+  "/admin/orders/:id/receipt",
+  requireLogin,
+  requireAdmin,
+  AdminController.downloadReceipt
+);
 
 // Pages
 app.get("/about", (req, res) => res.render("about"));
 app.get("/contact", (req, res) => res.render("contact"));
+app.get("/help-center", (req, res) => res.render("helpCenter"));
 
 // start server
 const PORT = 3000;

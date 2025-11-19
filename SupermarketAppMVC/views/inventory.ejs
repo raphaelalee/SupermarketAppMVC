@@ -3,6 +3,9 @@
 <% const totalProducts = products.length; %>
 <% const uniqueCategories = [...new Set(products.map(p => p.category))]; %>
 <% const totalValue = products.reduce((sum, p) => sum + Number(p.price || 0), 0); %>
+<% const categoryOptionsList = (typeof categoryOptions !== 'undefined' && Array.isArray(categoryOptions) && categoryOptions.length)
+  ? categoryOptions
+  : ['Produce','Meat','Seafood','Dairy','Bakery','Frozen','Pantry','Beverages','Snacks','Household']; %>
 
 <section class="inventory-hero">
   <div class="container hero-grid">
@@ -110,7 +113,7 @@
               <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
             <div class="modal-body">
-              <form action="/inventory/edit/<%= product.id %>" method="POST" class="admin-form needs-validation" novalidate>
+              <form action="/inventory/edit/<%= product.id %>" method="POST" class="admin-form needs-validation" novalidate enctype="multipart/form-data">
                 <label class="form-label">Product Name</label>
                 <input type="text" class="form-control mb-1" name="productName" value="<%= product.productName %>" required>
                 <div class="field-error text-danger small mb-3"></div>
@@ -120,12 +123,19 @@
                 <div class="field-error text-danger small mb-3"></div>
 
                 <label class="form-label">Category</label>
-                <input type="text" class="form-control mb-1" name="category" value="<%= product.category %>" required>
+                <select class="form-select mb-1" name="category" required>
+                  <option value="" disabled>Select a category</option>
+                  <% categoryOptionsList.forEach(option => { %>
+                    <option value="<%= option %>" <%= (product.category || '').toLowerCase() === option.toLowerCase() ? 'selected' : '' %>><%= option %></option>
+                  <% }) %>
+                </select>
                 <div class="field-error text-danger small mb-3"></div>
 
-                <label class="form-label">Image File Name</label>
-                <input type="text" class="form-control mb-1" name="image" value="<%= product.image %>" required>
-                <div class="field-error text-danger small mb-3"></div>
+                <input type="hidden" name="currentImage" value="<%= product.image %>">
+
+                <label class="form-label">Upload New Image</label>
+                <input type="file" class="form-control mb-1" name="imageFile" accept="image/*">
+                <div class="text-muted small mb-3">Leave blank to keep the current image.</div>
 
                 <button class="btn btn-success w-100">Save Changes</button>
               </form>
@@ -164,7 +174,7 @@
         <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
       </div>
       <div class="modal-body">
-        <form action="/inventory/add" method="POST" class="admin-form needs-validation" novalidate>
+        <form action="/inventory/add" method="POST" class="admin-form needs-validation" novalidate enctype="multipart/form-data">
           <label class="form-label">Product Name</label>
           <input type="text" class="form-control mb-1" name="productName" required>
           <div class="field-error text-danger small mb-3"></div>
@@ -174,12 +184,17 @@
           <div class="field-error text-danger small mb-3"></div>
 
           <label class="form-label">Category</label>
-          <input type="text" class="form-control mb-1" name="category" required>
+          <select class="form-select mb-1" name="category" required>
+            <option value="" disabled selected>Select a category</option>
+            <% categoryOptionsList.forEach(option => { %>
+              <option value="<%= option %>"><%= option %></option>
+            <% }) %>
+          </select>
           <div class="field-error text-danger small mb-3"></div>
 
-          <label class="form-label">Image File Name</label>
-          <input type="text" class="form-control mb-1" name="image" required>
-          <div class="field-error text-danger small mb-3"></div>
+          <label class="form-label">Upload Image</label>
+          <input type="file" class="form-control mb-1" name="imageFile" accept="image/*">
+          <div class="text-muted small mb-3">Upload a JPG, PNG, GIF, or WEBP file (max 4MB).</div>
 
           <button class="btn btn-success w-100">Create Product</button>
         </form>

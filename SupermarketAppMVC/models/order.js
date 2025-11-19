@@ -1,5 +1,10 @@
 const db = require("../db");
 
+const DEFAULT_ORDER_STATUS = "pending";
+
+// ==============================
+// ORDER CREATION
+// ==============================
 function createOrder(order, items, callback) {
   const {
     orderNumber,
@@ -9,8 +14,7 @@ function createOrder(order, items, callback) {
     total = 0,
     deliveryMethod = "standard",
     paymentMethod = "paynow",
-    paid = true,
-    createdAt = null,
+    status = DEFAULT_ORDER_STATUS,
   } = order;
 
   const payload = [
@@ -21,48 +25,56 @@ function createOrder(order, items, callback) {
     total,
     deliveryMethod,
     paymentMethod,
+    status,
   ];
 
-  db.query(
-    "INSERT INTO orders (orderNumber, userId, subtotal, deliveryFee, total, deliveryMethod, paymentMethod) VALUES (?, ?, ?, ?, ?, ?, ?)",
-    payload,
-    (err, result) => {
-      if (err) return callback(err);
-      const orderId = result.insertId;
+  const sql = `
+    INSERT INTO orders 
+      (orderNumber, userId, subtotal, deliveryFee, total, deliveryMethod, paymentMethod, status)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+  `;
 
-      if (!items || !items.length) {
-        return callback(null, orderId);
-      }
+  db.query(sql, payload, (err, result) => {
+    if (err) return callback(err);
 
-      const values = items.map((i) => [
-        orderId,
-        i.id || null,
-        i.productName || i.name,
-        i.price || 0,
-        i.quantity || 0,
-        i.subtotal || 0,
-      ]);
+    const orderId = result.insertId;
 
-      db.query(
-        "INSERT INTO order_items (orderId, productId, name, price, quantity, subtotal) VALUES ?",
-        [values],
-        (err2) => {
-          if (err2) return callback(err2);
-          callback(null, orderId);
-        }
-      );
+    if (!items || !items.length) {
+      return callback(null, orderId);
     }
-  );
+
+    const values = items.map((i) => [
+      orderId,
+      i.id || null,
+      i.productName || i.name,
+      i.price || 0,
+      i.quantity || 0,
+      i.subtotal || 0,
+    ]);
+
+    const itemsSql = `
+      INSERT INTO order_items 
+        (orderId, productId, name, price, quantity, subtotal)
+      VALUES ?
+    `;
+
+    db.query(itemsSql, [values], (err2) => {
+      if (err2) return callback(err2);
+      callback(null, orderId);
+    });
+  });
 }
 
+// ==============================
+// ORDER LOOKUPS
+// ==============================
 function getOrderByNumber(orderNumber, callback) {
   db.query(
     "SELECT * FROM orders WHERE orderNumber = ? LIMIT 1",
     [orderNumber],
     (err, rows) => {
       if (err) return callback(err);
-      if (!rows || !rows.length) return callback(null, null);
-      callback(null, rows[0]);
+      callback(null, rows && rows[0] ? rows[0] : null);
     }
   );
 }
@@ -70,14 +82,21 @@ function getOrderByNumber(orderNumber, callback) {
 function listAllWithUsers(callback) {
   const sql = `
     SELECT 
-      o.*,
+      o.id,
+      o.orderNumber,
+      o.total,
+      o.paymentMethod,
+      o.paid,
+      o.status,
+      o.createdAt,
       u.username AS customerName,
       COUNT(oi.id) AS itemsCount
     FROM orders o
     LEFT JOIN users u ON u.id = o.userId
     LEFT JOIN order_items oi ON oi.orderId = o.id
-    GROUP BY o.id
-    ORDER BY o.id DESC
+    GROUP BY 
+      o.id, o.orderNumber, o.total, o.paymentMethod, o.paid, o.status, o.createdAt, u.username
+    ORDER BY o.createdAt DESC, o.id DESC
   `;
 
   db.query(sql, (err, rows) => {
@@ -97,9 +116,155 @@ function getItemsByOrderId(orderId, callback) {
   );
 }
 
+function getOrderWithItems(orderId, callback) {
+  const sql = `
+    SELECT 
+      o.*,
+      u.username AS customerName,
+      u.email AS customerEmail,
+      u.contact AS customerPhone
+    FROM orders o
+    LEFT JOIN users u ON u.id = o.userId
+    WHERE o.id = ?
+    LIMIT 1
+  `;
+
+  db.query(sql, [orderId], (err, rows) => {
+    if (err) return callback(err);
+    if (!rows || !rows.length) return callback(null, null);
+    const order = rows[0];
+
+    getItemsByOrderId(orderId, (itemsErr, items) => {
+      if (itemsErr) return callback(itemsErr);
+      callback(null, { order, items: items || [] });
+    });
+  });
+}
+
+function updateOrderStatus(orderId, status, callback) {
+  db.query(
+    "UPDATE orders SET status = ? WHERE id = ?",
+    [status, orderId],
+    (err, result) => {
+      if (err) return callback(err);
+      callback(null, result);
+    }
+  );
+}
+
+// ==============================
+// DASHBOARD + ANALYTICS
+// ==============================
+function getSummaryStats(callback) {
+  const sql = `
+    SELECT 
+      COUNT(*) AS totalOrders,
+      COALESCE(SUM(total), 0) AS totalRevenue
+    FROM orders
+  `;
+
+  db.query(sql, (err, rows) => {
+    if (err) return callback(err);
+    const row = rows && rows[0] ? rows[0] : { totalOrders: 0, totalRevenue: 0 };
+    callback(null, row);
+  });
+}
+
+function getBestSellingProducts(limit = 5, callback) {
+  const safeLimit =
+    Number.isFinite(Number(limit)) && Number(limit) > 0 ? Number(limit) : 5;
+
+  const sql = `
+    SELECT 
+      COALESCE(oi.productId, 0) AS productId,
+      oi.name AS productName,
+      SUM(oi.quantity) AS totalQuantity,
+      SUM(oi.subtotal) AS totalRevenue
+    FROM order_items oi
+    GROUP BY COALESCE(oi.productId, oi.name)
+    ORDER BY totalQuantity DESC, totalRevenue DESC
+    LIMIT ?
+  `;
+
+  db.query(sql, [safeLimit], (err, rows) => {
+    if (err) return callback(err);
+    callback(null, rows || []);
+  });
+}
+
+function getSalesByCategory(callback) {
+  const sql = `
+    SELECT
+      COALESCE(p.category, 'Uncategorized') AS category,
+      SUM(oi.subtotal) AS revenue,
+      SUM(oi.quantity) AS quantity
+    FROM order_items oi
+    LEFT JOIN products p ON p.id = oi.productId
+    GROUP BY COALESCE(p.category, 'Uncategorized')
+    ORDER BY revenue DESC
+  `;
+
+  db.query(sql, (err, rows) => {
+    if (err) return callback(err);
+    callback(null, rows || []);
+  });
+}
+
+function getSalesByHourRange(hours = 24, callback) {
+  const safeHours =
+    Number.isFinite(Number(hours)) && Number(hours) > 0 ? Number(hours) : 24;
+
+  const sql = `
+    SELECT 
+      DATE_FORMAT(o.createdAt, '%Y-%m-%d %H:00:00') AS bucket,
+      COUNT(*) AS ordersCount,
+      COALESCE(SUM(o.total), 0) AS revenue
+    FROM orders o
+    WHERE o.createdAt >= DATE_SUB(NOW(), INTERVAL ? HOUR)
+    GROUP BY bucket
+    ORDER BY bucket ASC
+  `;
+
+  db.query(sql, [safeHours], (err, rows) => {
+    if (err) return callback(err);
+    callback(null, rows || []);
+  });
+}
+
+function getReturningCustomers(limit = 5, callback) {
+  const safeLimit =
+    Number.isFinite(Number(limit)) && Number(limit) > 0 ? Number(limit) : 5;
+
+  const sql = `
+    SELECT 
+      u.id,
+      u.username,
+      COUNT(o.id) AS ordersCount,
+      COALESCE(SUM(o.total), 0) AS totalSpent
+    FROM orders o
+    INNER JOIN users u ON u.id = o.userId
+    GROUP BY u.id, u.username
+    HAVING COUNT(o.id) > 1
+    ORDER BY ordersCount DESC, totalSpent DESC
+    LIMIT ?
+  `;
+
+  db.query(sql, [safeLimit], (err, rows) => {
+    if (err) return callback(err);
+    callback(null, rows || []);
+  });
+}
+
 module.exports = {
   createOrder,
   getOrderByNumber,
   getItemsByOrderId,
   listAllWithUsers,
+  getOrderWithItems,
+  updateOrderStatus,
+  getSummaryStats,
+  getBestSellingProducts,
+  getSalesByCategory,
+  getSalesByHourRange,
+  getReturningCustomers,
 };

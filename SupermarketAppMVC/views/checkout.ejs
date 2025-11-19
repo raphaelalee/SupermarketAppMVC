@@ -1,155 +1,197 @@
-<%- include('partials/header') %>
+﻿<%- include('partials/header') %>
 
-<section class="checkout-hero container">
-  <div>
-    <p class="text-muted small mb-1">Secure checkout</p>
-    <h1 class="mb-1">Finish your order</h1>
-    <p class="text-muted mb-0">Review your total, choose delivery, and pick how you want to pay.</p>
-  </div>
-  <div class="total-chip">Total: S$ <%= total.toFixed(2) %></div>
-</section>
+<section class="checkout-shell" style="background:#f4f6f7;">
+  <div class="container py-5">
+    <header class="mb-4">
+      <p class="text-muted small mb-1">Secure checkout</p>
+      <h1 class="mb-1 fw-semibold">Finish your order</h1>
+      <p class="text-muted mb-0">One last step—confirm delivery and payment to complete your purchase.</p>
+    </header>
 
-<section class="checkout-layout container">
-  <div class="checkout-main">
-    <form method="POST" action="/checkout" id="checkout-form" class="panel">
-      <input type="hidden" name="deliveryMethod" id="deliveryMethod" value="standard">
-      <input type="hidden" name="deliveryFee" id="deliveryFee" value="3.50">
+    <div class="row g-4">
+      <div class="col-lg-7">
+        <form method="POST" action="/checkout" id="checkout-form" class="card border-0 shadow-sm p-4" novalidate>
+          <input type="hidden" name="deliveryMethod" id="deliveryMethod" value="standard">
+          <input type="hidden" name="deliveryFee" id="deliveryFee" value="3.50">
 
-      <div class="panel-group">
-        <div class="panel-head">
-          <h4 class="mb-1">Delivery</h4>
-          <p class="text-muted small mb-0">Choose the option that works best for you.</p>
-        </div>
-        <div class="option-list">
-          <label class="option-card">
-            <input type="radio" name="delivery" value="standard" data-fee="3.50" checked>
-            <div>
-              <strong>Standard Delivery</strong>
-              <p class="text-muted small mb-0">2-3 days · $3.50</p>
+          <section class="mb-4">
+            <div class="d-flex justify-content-between align-items-center mb-2">
+              <h4 class="mb-0 fw-semibold">Delivery</h4>
+              <span class="badge bg-success-subtle text-success">Step 1 of 2</span>
             </div>
-            <span class="option-price">$3.50</span>
-          </label>
-          <label class="option-card">
-            <input type="radio" name="delivery" value="express" data-fee="6.00">
-            <div>
-              <strong>Express Delivery</strong>
-              <p class="text-muted small mb-0">Same day · $6.00</p>
+            <p class="text-muted small mb-3">Choose the option that works best for your schedule.</p>
+            <div class="row g-3">
+              <div class="col-12">
+                <label class="checkout-option d-flex align-items-center">
+                  <input type="radio" name="delivery" value="standard" data-fee="3.50" checked>
+                  <div class="checkout-option-body">
+                    <strong>Standard Delivery</strong>
+                    <span class="text-muted small">2-3 days • $3.50</span>
+                  </div>
+                  <span class="price-tag">$3.50</span>
+                </label>
+              </div>
+              <div class="col-12">
+                <label class="checkout-option d-flex align-items-center">
+                  <input type="radio" name="delivery" value="express" data-fee="6.00">
+                  <div class="checkout-option-body">
+                    <strong>Express Delivery</strong>
+                    <span class="text-muted small">Same day • $6.00</span>
+                  </div>
+                  <span class="price-tag">$6.00</span>
+                </label>
+              </div>
+              <div class="col-12">
+                <label class="checkout-option d-flex align-items-center">
+                  <input type="radio" name="delivery" value="pickup" data-fee="0">
+                  <div class="checkout-option-body">
+                    <strong>Store Pickup</strong>
+                    <span class="text-muted small">Collect today • Free</span>
+                  </div>
+                  <span class="price-tag">$0.00</span>
+                </label>
+              </div>
             </div>
-            <span class="option-price">$6.00</span>
-          </label>
-          <label class="option-card">
-            <input type="radio" name="delivery" value="pickup" data-fee="0">
-            <div>
-              <strong>Store Pickup</strong>
-              <p class="text-muted small mb-0">Collect today · Free</p>
+
+            <div class="row g-3 mt-2" id="delivery-fields">
+              <div class="col-12">
+                <label class="form-label small text-muted">Recipient name</label>
+                <input type="text" class="form-control" name="shippingName" placeholder="Full name for delivery" required>
+              </div>
+              <div class="col-12">
+                <label class="form-label small text-muted">Contact number</label>
+                <input type="tel" class="form-control" name="shippingPhone" placeholder="+65 8123 4567" pattern="\+?\d{8,15}" required>
+              </div>
+              <div class="col-12">
+                <label class="form-label small text-muted">Delivery address</label>
+                <textarea class="form-control" name="shippingAddress" rows="3" placeholder="Block / Unit / Postal code" required></textarea>
+              </div>
             </div>
-            <span class="option-price">$0.00</span>
-          </label>
-        </div>
+          </section>
+
+          <section class="mb-4">
+            <div class="d-flex justify-content-between align-items-center mb-2">
+              <h4 class="mb-0 fw-semibold">Payment method</h4>
+              <span class="badge bg-success-subtle text-success">Step 2 of 2</span>
+            </div>
+            <p class="text-muted small mb-3">Pick how you’d like to pay.</p>
+            <div class="row g-3">
+              <div class="col-12">
+                <label class="checkout-option align-items-start">
+                  <input type="radio" name="payment" value="paynow" checked>
+                  <div class="checkout-option-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                      <strong>PayNow</strong>
+                      <span class="badge bg-success text-white">Recommended</span>
+                    </div>
+                    <span class="text-muted small">UEN: 202412345A • Instant confirmation</span>
+                  </div>
+                </label>
+              </div>
+              <div class="col-12">
+                <label class="checkout-option">
+                  <input type="radio" name="payment" value="paylah">
+                  <div class="checkout-option-body">
+                    <strong>PayLah! / PayAnyone</strong>
+                    <span class="text-muted small">Fast mobile transfer via QR</span>
+                  </div>
+                </label>
+              </div>
+              <div class="col-12">
+                <label class="checkout-option align-items-start">
+                  <input type="radio" name="payment" value="card">
+                  <div class="checkout-option-body">
+                    <strong>Credit / Debit Card</strong>
+                    <span class="text-muted small">Visa, Mastercard • Secured by SSL</span>
+                  </div>
+                </label>
+              </div>
+            </div>
+
+            <div class="card-fields mt-3" id="card-fields">
+              <div class="row g-3">
+                <div class="col-12">
+                  <label class="form-label small text-muted">Name on card</label>
+                  <input type="text" class="form-control" name="cardName" placeholder="Full name" required>
+                </div>
+                <div class="col-12">
+                  <label class="form-label small text-muted">Card number</label>
+                  <input type="text" class="form-control" name="cardNumber" placeholder="1111 2222 3333 4444" maxlength="19" pattern="\d{13,19}" required>
+                </div>
+                <div class="col-6">
+                  <label class="form-label small text-muted">Expiry</label>
+                  <input type="text" class="form-control" name="cardExpiry" placeholder="MM/YY" maxlength="5" pattern="(0[1-9]|1[0-2])\/\d{2}" required>
+                </div>
+                <div class="col-6">
+                  <label class="form-label small text-muted">CVV</label>
+                  <input type="text" class="form-control" name="cardCvv" placeholder="123" maxlength="4" pattern="\d{3,4}" required>
+                </div>
+              </div>
+            </div>
+          </section>
+
+          <button type="submit" class="btn btn-success w-100 py-3 fw-semibold">Complete Payment</button>
+          <p class="text-muted small text-center mt-3 mb-0">Transactions are encrypted. Need help? <a href="/contact">Contact us</a>.</p>
+        </form>
       </div>
 
-      <div class="panel-group">
-        <div class="panel-head">
-          <h4 class="mb-1">Payment method</h4>
-          <p class="text-muted small mb-0">Select how you would like to pay.</p>
-        </div>
-        <div class="option-list payment-row">
-          <label class="option-card">
-            <input type="radio" name="payment" value="paynow" checked>
-            <div>
-              <strong>PayNow</strong>
-              <p class="text-muted small mb-0">UEN: 202412345A · Instant confirmation</p>
-            </div>
-            <span class="pill">Recommended</span>
-          </label>
-          <label class="option-card">
-            <input type="radio" name="payment" value="paylah">
-            <div>
-              <strong>PayLah! / PayAnyone</strong>
-              <p class="text-muted small mb-0">Fast transfer via mobile or QR</p>
-            </div>
-          </label>
-          <label class="option-card">
-            <input type="radio" name="payment" value="card">
-            <div>
-              <strong>Credit / Debit Card</strong>
-              <p class="text-muted small mb-0">Visa, Mastercard · Secured by SSL</p>
-            </div>
-          </label>
-        </div>
-
-        <div class="qr-panel" id="paynow-qr" aria-live="polite" style="display:flex;">
-          <div>
-            <p class="fw-semibold mb-1">Scan to pay with PayNow</p>
-            <p class="small text-muted mb-2">Use your banking app to scan. Amount is S$ <%= total.toFixed(2) %>.</p>
+      <div class="col-lg-5">
+        <aside class="card border-0 shadow-sm p-4 mb-4">
+          <h5 class="mb-3 fw-semibold">Order summary</h5>
+          <div class="border rounded-3 mb-3">
+            <table class="table mb-0 align-middle">
+              <tbody>
+                <% if ((items || []).length === 0) { %>
+                  <tr>
+                    <td class="text-muted small" colspan="3">Your basket is empty.</td>
+                  </tr>
+                <% } else { %>
+                  <% (items || []).forEach(it => { %>
+                    <tr>
+                      <td style="width:56px;">
+                        <img src="/images/<%= it.image || 'broccoli.png' %>" alt="<%= it.productName %>" class="img-fluid rounded" style="max-width:48px;">
+                      </td>
+                      <td>
+                        <p class="mb-0 fw-semibold"><%= it.productName %></p>
+                        <p class="text-muted small mb-0">Qty <%= it.quantity %> • $<%= Number(it.price).toFixed(2) %></p>
+                      </td>
+                      <td class="text-end fw-semibold">$<%= Number(it.subtotal || 0).toFixed(2) %></td>
+                    </tr>
+                  <% }) %>
+                <% } %>
+              </tbody>
+            </table>
           </div>
-          <div class="qr-box">
-            <img src="/images/paynow-qr.png" alt="PayNow QR code" class="qr-img">
-            <p class="small text-muted mt-2 mb-0">UEN: 202412345A</p>
+          <div class="summary-row">
+            <span>Subtotal</span>
+            <strong id="summary-subtotal">S$ <%= total.toFixed(2) %></strong>
           </div>
+          <div class="summary-row">
+            <span>Delivery</span>
+            <strong id="summary-delivery">S$ 3.50*</strong>
+          </div>
+          <div class="summary-row">
+            <span>Savings</span>
+            <strong class="text-success">S$ 0.00</strong>
+          </div>
+          <p class="text-muted small mb-3">*Exact amount updates when you change the delivery option.</p>
+          <div class="summary-row total-row">
+            <span>Amount due</span>
+            <strong id="summary-total">S$ <%= (total + 3.5).toFixed(2) %></strong>
+          </div>
+        </aside>
+
+        <div class="card border-0 shadow-sm p-4">
+          <h6 class="fw-semibold mb-3">Why people love FreshMart</h6>
+          <ul class="list-unstyled text-muted small mb-0">
+            <li class="mb-2">• Curated, farm-fresh produce delivered daily.</li>
+            <li class="mb-2">• Free surprise gift with every order above S$80.</li>
+            <li class="mb-2">• Concierge support on WhatsApp & phone.</li>
+          </ul>
         </div>
-
-        <div class="card-fields" id="card-fields" style="display:none;">
-          <div class="row g-3">
-            <div class="col-12">
-              <label class="form-label small text-muted">Name on card</label>
-              <input type="text" class="form-control" name="cardName" placeholder="Full name">
-            </div>
-            <div class="col-12">
-              <label class="form-label small text-muted">Card number</label>
-              <input type="text" class="form-control" name="cardNumber" placeholder="1111 2222 3333 4444" maxlength="19">
-            </div>
-            <div class="col-6">
-              <label class="form-label small text-muted">Expiry</label>
-              <input type="text" class="form-control" name="cardExpiry" placeholder="MM/YY" maxlength="5">
-            </div>
-            <div class="col-6">
-              <label class="form-label small text-muted">CVV</label>
-              <input type="text" class="form-control" name="cardCvv" placeholder="123" maxlength="4">
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <button type="submit" class="btn btn-success w-100 mt-3">Complete Payment</button>
-      <p class="text-muted small text-center mt-2 mb-0">Transactions are encrypted. Need help? <a href="/contact">Contact us</a>.</p>
-    </form>
-  </div>
-
-  <aside class="checkout-side">
-    <div class="checkout-card summary">
-      <h5 class="mb-3">Order summary</h5>
-      <div class="mini-item-list">
-        <% (items || []).forEach(it => { %>
-          <div class="mini-item">
-            <img src="/images/<%= it.image || 'broccoli.png' %>" alt="<%= it.productName %>">
-            <div>
-              <p class="mb-0"><%= it.productName %></p>
-              <p class="text-muted small mb-0">Qty: <%= it.quantity %> · $<%= Number(it.price).toFixed(2) %></p>
-            </div>
-            <strong>$<%= Number(it.subtotal || 0).toFixed(2) %></strong>
-          </div>
-        <% }) %>
-      </div>
-      <div class="summary-row mt-2">
-        <span>Subtotal</span>
-        <strong id="summary-subtotal">S$ <%= total.toFixed(2) %></strong>
-      </div>
-      <div class="summary-row">
-        <span>Delivery</span>
-        <strong id="summary-delivery">S$ 3.50*</strong>
-      </div>
-      <p class="text-muted small mb-3">*Exact delivery fee calculated at checkout based on option selected.</p>
-      <div class="summary-row total-row">
-        <span>Total</span>
-        <strong id="summary-total">S$ <%= (total + 3.5).toFixed(2) %></strong>
       </div>
     </div>
-    <div class="checkout-card text-center">
-      <img src="/images/sg-pay.png" alt="PayNow/PayLah Logos" width="180">
-      <p class="small text-muted mt-2 mb-0">We accept PayNow, PayLah!, and major cards.</p>
-    </div>
-  </aside>
+  </div>
 </section>
 
 <%- include('partials/footer') %>
@@ -164,7 +206,10 @@
     const subtotal = <%= total.toFixed(2) %>;
     const cardFields = document.getElementById('card-fields');
     const paymentRadios = document.querySelectorAll('input[name="payment"]');
-    const paynowQr = document.getElementById('paynow-qr');
+    const deliveryFields = document.getElementById('delivery-fields');
+    const deliveryInputs = deliveryFields ? deliveryFields.querySelectorAll('input, textarea') : [];
+    const cardInputs = cardFields ? cardFields.querySelectorAll('input') : [];
+    const checkoutForm = document.getElementById('checkout-form');
 
     function formatMoney(val) {
       return 'S$ ' + Number(val).toFixed(2);
@@ -177,20 +222,40 @@
       deliveryFeeInput.value = fee.toFixed(2);
       summaryDelivery.textContent = formatMoney(fee) + '*';
       summaryTotal.textContent = formatMoney(Number(subtotal) + fee);
+
+      if (deliveryFields) {
+        const isPickup = selected && selected.value === 'pickup';
+        deliveryFields.style.display = isPickup ? 'none' : 'flex';
+        deliveryFields.style.flexDirection = 'column';
+        deliveryInputs.forEach((input) => {
+          input.required = !isPickup;
+          input.disabled = isPickup;
+        });
+      }
     }
 
     function togglePaymentBlocks() {
       const selected = Array.from(paymentRadios).find(r => r.checked);
       const payment = selected ? selected.value : '';
-      cardFields.style.display = payment === 'card' ? 'block' : 'none';
-      if (paynowQr) {
-        paynowQr.style.display = payment === 'paynow' ? 'flex' : 'none';
-      }
+      const showCard = payment === 'card';
+      cardFields.style.display = showCard ? 'block' : 'none';
+      cardInputs.forEach((input) => {
+        input.required = showCard;
+        input.disabled = !showCard;
+      });
     }
 
     deliveryRadios.forEach(r => r.addEventListener('change', updateDelivery));
     paymentRadios.forEach(r => r.addEventListener('change', togglePaymentBlocks));
     updateDelivery();
     togglePaymentBlocks();
+
+    checkoutForm.addEventListener('submit', (event) => {
+      if (!checkoutForm.checkValidity()) {
+        event.preventDefault();
+        event.stopPropagation();
+        checkoutForm.classList.add('was-validated');
+      }
+    });
   })();
 </script>

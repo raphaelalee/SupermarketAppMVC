@@ -1,6 +1,83 @@
 // controllers/SupermarketController.js
 
+const fs = require("fs");
+const path = require("path");
+const multer = require("multer");
 const Product = require("../models/supermarket"); // IMPORT MODEL
+
+const IMAGE_UPLOAD_DIR = path.join(
+  __dirname,
+  "..",
+  "public",
+  "images",
+  "uploads"
+);
+fs.mkdirSync(IMAGE_UPLOAD_DIR, { recursive: true });
+
+const sanitizeFileName = (filename) => {
+  const ext = path.extname(filename || "").toLowerCase() || ".png";
+  const base = path
+    .basename(filename, ext)
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "");
+  return `${base || "image"}-${Date.now()}${ext}`;
+};
+
+const storage = multer.diskStorage({
+  destination: (req, file, cb) => cb(null, IMAGE_UPLOAD_DIR),
+  filename: (req, file, cb) => cb(null, sanitizeFileName(file.originalname)),
+});
+
+const upload = multer({
+  storage,
+  limits: { fileSize: 4 * 1024 * 1024 },
+  fileFilter: (req, file, cb) => {
+    if (!file.mimetype || !file.mimetype.startsWith("image/")) {
+      return cb(
+        new Error("Only image uploads are allowed (PNG, JPG, GIF, WEBP).")
+      );
+    }
+    return cb(null, true);
+  },
+});
+
+const imageUploadMiddleware = upload.single("imageFile");
+const CATEGORY_OPTIONS = [
+  "Produce",
+  "Meat",
+  "Seafood",
+  "Dairy",
+  "Bakery",
+  "Frozen",
+  "Pantry",
+  "Beverages",
+  "Snacks",
+  "Household",
+];
+
+exports.handleProductImageUpload = (req, res, next) => {
+  imageUploadMiddleware(req, res, (err) => {
+    if (err) {
+      console.error("Image upload failed:", err);
+      req.flash(
+        "error",
+        err.message || "Image upload failed. Please try again with a smaller file."
+      );
+      return res.redirect("/inventory");
+    }
+    return next();
+  });
+};
+
+const resolveImageValue = (req, fallback = "placeholder.png") => {
+  if (req.file && req.file.filename) {
+    return path.posix.join("uploads", req.file.filename);
+  }
+  const current = (req.body.currentImage || "").trim();
+  if (current) return current;
+  return fallback;
+};
 
 /**
  * SHOPPING PAGE + CART
@@ -197,6 +274,7 @@ exports.inventoryPage = (req, res) => {
       user: req.session.user || null,
       searchQuery,
       sortOption,
+      categoryOptions: CATEGORY_OPTIONS,
     });
   });
 };
@@ -205,9 +283,10 @@ exports.inventoryPage = (req, res) => {
  * ADD PRODUCT
  */
 exports.addProduct = (req, res) => {
-  const { productName, price, category, image } = req.body;
+  const { productName, price, category } = req.body;
+  const imageValue = resolveImageValue(req);
 
-  Product.create(productName, price, category, image, (err) => {
+  Product.create(productName, price, category, imageValue, (err) => {
     if (err) {
       req.flash("error", "Failed to add product");
       return res.redirect("/inventory");
@@ -223,9 +302,10 @@ exports.addProduct = (req, res) => {
  */
 exports.updateProduct = (req, res) => {
   const id = req.params.id;
-  const { productName, price, category, image } = req.body;
+  const { productName, price, category } = req.body;
+  const imageValue = resolveImageValue(req);
 
-  Product.update(id, productName, price, category, image, (err) => {
+  Product.update(id, productName, price, category, imageValue, (err) => {
     if (err) {
       req.flash("error", "Failed to update product");
       return res.redirect("/inventory");

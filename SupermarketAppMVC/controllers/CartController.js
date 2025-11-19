@@ -5,7 +5,7 @@ function buildCartSnapshot(cart = {}, callback) {
   const ids = Object.keys(cart);
 
   if (ids.length === 0) {
-    return callback(null, { items: [], total: 0, count: 0 });
+    return callback(null, { items: [], total: 0, count: 0, selectedTotal: 0 });
   }
 
   Product.getAll((err, products) => {
@@ -21,7 +21,13 @@ function buildCartSnapshot(cart = {}, callback) {
 
     ids.forEach((id) => {
       const product = byId[id];
-      const quantity = parseInt(cart[id], 10) || 0;
+      const entry = cart[id];
+      const quantity =
+        typeof entry === "object"
+          ? parseInt(entry.quantity, 10) || 0
+          : parseInt(entry, 10) || 0;
+      const selected =
+        typeof entry === "object" ? entry.selected !== false : true;
 
       if (!product || quantity <= 0) {
         delete cart[id];
@@ -38,13 +44,15 @@ function buildCartSnapshot(cart = {}, callback) {
         image: product.image,
         quantity,
         subtotal,
+        selected,
       });
 
       total += subtotal;
     });
 
     const count = items.reduce((sum, item) => sum + item.quantity, 0);
-    callback(null, { items, total, count });
+    const selectedTotal = items.filter((item) => item.selected).reduce((sum, item) => sum + item.subtotal, 0);
+    callback(null, { items, total, count, selectedTotal });
   });
 }
 
@@ -52,7 +60,12 @@ function buildCartSnapshot(cart = {}, callback) {
 exports.addToCart = (req, res) => {
   const productId = req.params.id;
   if (!req.session.cart) req.session.cart = {};
-  req.session.cart[productId] = (req.session.cart[productId] || 0) + 1;
+  const current = req.session.cart[productId];
+  const quantity =
+    typeof current === "object"
+      ? (parseInt(current.quantity, 10) || 0) + 1
+      : (parseInt(current, 10) || 0) + 1;
+  req.session.cart[productId] = { quantity, selected: true };
   req.flash("success", "Added to cart");
   res.redirect("/shopping");
 };
@@ -60,7 +73,12 @@ exports.addToCart = (req, res) => {
 /* View Cart */
 exports.viewCart = (req, res) => {
   const summary = res.locals.cartSummary || { items: [], total: 0 };
-  res.render("cart", { items: summary.items || [], total: summary.total || 0, user: req.session.user || null });
+  res.render("cart", {
+    items: summary.items || [],
+    total: summary.total || 0,
+    selectedTotal: summary.selectedTotal || summary.total || 0,
+    user: req.session.user || null,
+  });
 };
 
 /* Remove Item */
@@ -88,7 +106,8 @@ exports.increaseQuantity = (req, res) => {
   const id = req.params.id;
 
   if (!req.session.cart) req.session.cart = {};
-  req.session.cart[id] = (req.session.cart[id] || 1) + 1;
+  const current = req.session.cart[id]?.quantity || 1;
+  req.session.cart[id] = { ...(req.session.cart[id] || {}), quantity: current + 1 };
 
   return res.redirect("/shopping");
 };
@@ -97,10 +116,10 @@ exports.decreaseQuantity = (req, res) => {
   const id = req.params.id;
 
   if (req.session.cart && req.session.cart[id]) {
-    req.session.cart[id] -= 1;
+    req.session.cart[id].quantity -= 1;
 
     // Remove if quantity <= 0
-    if (req.session.cart[id] <= 0) {
+    if (req.session.cart[id].quantity <= 0) {
       delete req.session.cart[id];
     }
   }
@@ -111,23 +130,45 @@ exports.decreaseQuantity = (req, res) => {
 exports.updateItemQuantity = (req, res) => {
   const { id } = req.params;
   let { quantity } = req.body;
+  const { selected } = req.body;
 
   quantity = parseInt(quantity, 10);
   if (Number.isNaN(quantity) || quantity < 0) {
-    return res.status(400).json({ success: false, message: "Invalid quantity." });
+    const wantsJson =
+      req.xhr ||
+      (req.get("Accept") && req.get("Accept").includes("application/json"));
+    const responsePayload = { success: false, message: "Invalid quantity." };
+    return wantsJson
+      ? res.status(400).json(responsePayload)
+      : res.redirect("/cart");
   }
 
   if (!req.session.cart) req.session.cart = {};
 
-  if (quantity === 0) {
-    delete req.session.cart[id];
-  } else {
-    req.session.cart[id] = quantity;
+  if (!req.session.cart[id]) req.session.cart[id] = { selected: true };
+
+  if (typeof selected !== "undefined") {
+    req.session.cart[id].selected = selected === "true" || selected === true;
   }
 
+  if (quantity === 0) delete req.session.cart[id];
+  else req.session.cart[id].quantity = quantity;
+
   buildCartSnapshot(req.session.cart, (err, summary) => {
+    const wantsJson =
+      req.xhr ||
+      (req.get("Accept") && req.get("Accept").includes("application/json"));
+
     if (err) {
-      return res.status(500).json({ success: false, message: "Failed to update cart." });
+      return wantsJson
+        ? res
+            .status(500)
+            .json({ success: false, message: "Failed to update cart." })
+        : res.redirect("/cart");
+    }
+
+    if (!wantsJson) {
+      return res.redirect("/cart");
     }
 
     const updatedItem = summary.items.find((item) => String(item.id) === String(id));
@@ -137,3 +178,8 @@ exports.updateItemQuantity = (req, res) => {
 };
 
 exports.buildCartSnapshot = buildCartSnapshot;
+
+exports.clearCart = (req, res) => {
+  req.session.cart = {};
+  res.redirect("/cart");
+};

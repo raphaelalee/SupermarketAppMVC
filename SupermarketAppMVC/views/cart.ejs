@@ -11,7 +11,8 @@
         <a href="/shopping" class="btn btn-outline-success btn-pill-sm">Continue Shopping</a>
       </div>
 
-      <% if (!items.length) { %>
+      <% const hasItems = items.length > 0; %>
+      <% if (!hasItems) { %>
         <div class="cart-empty-state">
           <h4>Your cart is empty</h4>
           <p class="text-muted mb-3">Browse our curated catalogue to add groceries, then revisit this page to checkout.</p>
@@ -20,9 +21,19 @@
       <% } else { %>
         <div class="cart-item-list">
           <% items.forEach(item => { %>
-            <article class="cart-line">
+            <article class="cart-line align-items-center">
+              <label class="form-check me-3 mb-0">
+                <input
+                  class="form-check-input"
+                  type="checkbox"
+                  data-select-checkbox
+                  data-item-id="<%= item.id %>"
+                  data-item-qty="<%= item.quantity %>"
+                  <%= item.selected ? 'checked' : '' %>
+                >
+              </label>
               <div class="line-media">
-                <img src="/images/<%= item.image || 'broccoli.png' %>" alt="<%= item.productName %>">
+                <img src="/images/<%= item.image || 'broccoli.png' %>" alt="<%= item.productName %>" style="width:120px;height:120px;object-fit:contain;">
               </div>
               <div class="line-body">
                 <div class="line-info">
@@ -51,60 +62,67 @@
 
     <aside class="summary-col">
       <div class="summary-card">
-        <h4>Delivery</h4>
-        <p class="text-muted small mb-3">Choose the option that works best for you.</p>
-        <form class="delivery-options">
-          <label>
-            <input type="radio" name="delivery" value="standard" checked>
-            <div>
-              <strong>Standard Delivery</strong>
-              <span class="text-muted small d-block">2-3 days &middot; $3.50</span>
-            </div>
-            <span>$3.50</span>
-          </label>
-          <label>
-            <input type="radio" name="delivery" value="express">
-            <div>
-              <strong>Express Delivery</strong>
-              <span class="text-muted small d-block">Same day &middot; $6.00</span>
-            </div>
-            <span>$6.00</span>
-          </label>
-          <label>
-            <input type="radio" name="delivery" value="pickup">
-            <div>
-              <strong>Store Pickup</strong>
-              <span class="text-muted small d-block">Collect today &middot; Free</span>
-            </div>
-            <span>$0.00</span>
-          </label>
-        </form>
-      </div>
-
-      <div class="summary-card">
         <h4>Order Summary</h4>
+        <p class="text-muted small mb-3">Quick snapshot of your costs before checkout.</p>
         <div class="summary-row">
-          <span>Subtotal</span>
-          <strong>$<%= Number(total || 0).toFixed(2) %></strong>
+          <span>Subtotal (selected)</span>
+          <strong>$<%= Number(selectedTotal || 0).toFixed(2) %></strong>
         </div>
         <div class="summary-row">
           <span>Estimated Delivery</span>
           <strong>$3.50*</strong>
         </div>
-        <p class="text-muted small mb-3">*Exact delivery fee calculated at checkout based on option selected.</p>
-        <% const isLoggedIn = !!user; const hasItems = items.length > 0; %>
+        <div class="summary-row">
+          <span>Rewards Savings</span>
+          <strong class="text-success">$0.00</strong>
+        </div>
+        <p class="text-muted small mb-3">*Exact delivery fee calculated during checkout when you choose a method.</p>
+        <% const isLoggedIn = !!user; const hasSelected = Number(selectedTotal || 0) > 0; %>
         <form action="<%= isLoggedIn ? '/checkout' : '/login' %>" method="get">
-          <button class="btn btn-success w-100" <%= hasItems ? '' : 'disabled' %>><%= isLoggedIn ? 'Proceed to Checkout' : 'Log in to Checkout' %></button>
+          <button class="btn btn-success w-100" <%= hasSelected ? '' : 'disabled' %>><%= isLoggedIn ? 'Proceed to Checkout' : 'Log in to Checkout' %></button>
         </form>
-        <% if (isLoggedIn) { %>
-          <a href="/checkout" class="btn btn-outline-success w-100 mt-2">View Payment Options</a>
-        <% } else { %>
+        <% if (!isLoggedIn) { %>
           <a href="/register" class="btn btn-outline-success w-100 mt-2">Create an Account</a>
-          <p class="text-muted small mt-2">Please log in or sign up before completing your purchase.</p>
+          <p class="text-muted small mt-2 mb-0">Please log in or sign up before completing your purchase.</p>
         <% } %>
+        <% if (hasItems) { %>
+          <form action="/cart/clear" method="POST" class="mt-3">
+            <button class="btn btn-link text-danger w-100">Clear Cart</button>
+          </form>
+        <% } %>
+      </div>
+
+      <div class="summary-card">
+        <h5>Need help?</h5>
+        <p class="text-muted small mb-2">Our concierge team can assist with substitutions, delivery tweaks, and more.</p>
+        <ul class="text-muted small ps-3 mb-0">
+          <li>WhatsApp us at +65 6123 4567</li>
+          <li>Email hello@freshmart.sg</li>
+          <li>Live chat available 8 AM – 10 PM</li>
+        </ul>
       </div>
     </aside>
   </div>
 </section>
+
+<script>
+  document.addEventListener('DOMContentLoaded', () => {
+    document.querySelectorAll('[data-select-checkbox]').forEach((checkbox) => {
+      checkbox.addEventListener('change', () => {
+        const id = checkbox.getAttribute('data-item-id');
+        const qty = checkbox.getAttribute('data-item-qty') || 1;
+        const params = new URLSearchParams();
+        params.append('quantity', qty);
+        params.append('selected', checkbox.checked);
+
+        fetch(`/cart/update/${id}`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+          body: params.toString(),
+        }).then(() => window.location.reload());
+      });
+    });
+  });
+</script>
 
 <%- include('partials/footer') %>

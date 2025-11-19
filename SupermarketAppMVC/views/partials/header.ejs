@@ -27,19 +27,21 @@
           <li class="nav-item">
             <a class="nav-link px-3" href="/shopping">Shop</a>
           </li>
-          <li class="nav-item">
-            <a class="nav-link px-3" href="/about">About</a>
-          </li>
-          <li class="nav-item">
-            <a class="nav-link px-3" href="/contact">Contact</a>
-          </li>
+          <% if (!(user && user.role === 'admin')) { %>
+            <li class="nav-item">
+              <a class="nav-link px-3" href="/about">About</a>
+            </li>
+            <li class="nav-item">
+              <a class="nav-link px-3" href="/help-center">Help Center</a>
+            </li>
+          <% } %>
 
           <% if (user && user.role === 'admin') { %>
             <li class="nav-item">
               <a class="nav-link px-3" href="/inventory">Inventory</a>
             </li>
             <li class="nav-item">
-              <a class="nav-link px-3" href="/admin/orders">Orders</a>
+              <a class="nav-link px-3" href="/admin/orders">Dashboard</a>
             </li>
           <% } %>
 
@@ -56,13 +58,15 @@
             </li>
           <% } %>
 
-          <li class="nav-item">
-            <a class="btn btn-outline-success ms-lg-2 cart-trigger d-flex align-items-center gap-1" href="/cart">
-              <i class="bi bi-cart3 fs-5"></i>
-              <span>Cart</span>
-              <span class="badge rounded-pill text-success-emphasis bg-success-subtle fw-semibold" data-cart-count><%= cartCount || 0 %></span>
-            </a>
-          </li>
+          <% if (!(user && user.role === 'admin')) { %>
+            <li class="nav-item">
+              <a class="btn btn-outline-success ms-lg-2 cart-trigger d-flex align-items-center gap-1" href="/cart">
+                <i class="bi bi-cart3 fs-5"></i>
+                <span>Cart</span>
+                <span class="badge rounded-pill text-success-emphasis bg-success-subtle fw-semibold" data-cart-count><%= cartCount || 0 %></span>
+              </a>
+            </li>
+          <% } %>
         </ul>
       </div>
     </div>
