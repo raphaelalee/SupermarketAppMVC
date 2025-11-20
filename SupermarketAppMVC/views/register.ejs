@@ -6,72 +6,115 @@
   <title>Register | Supermarket</title>
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
   <link rel="stylesheet" href="/css/site.css">
+  <link rel="stylesheet" href="/css/auth.css">
 </head>
 <body class="bg-light">
 
   <%- include('partials/header') %>
 
   <section class="auth-hero">
-    <div class="auth-shell container">
-      <div class="auth-panel">
-        <p class="eyebrow">Welcome to FreshMart</p>
-        <h1>Create Account</h1>
+    <div class="container">
+      <div class="d-flex justify-content-center">
+        <div class="card auth-card">
+          <div class="card-body">
+            <div class="text-center mb-3">
+              <div class="auth-brand">FreshMart</div>
+              <div class="auth-sub">Create your account — shop fresh, fast</div>
+            </div>
 
-    <% if (messages && messages.length > 0) { %>
-      <div class="alert alert-danger">
-        <% messages.forEach(msg => { %>
-          <p><%= msg %></p>
-        <% }) %>
+            <% if (messages && messages.length > 0) { %>
+              <div class="alert alert-danger">
+                <% messages.forEach(msg => { %>
+                  <p class="mb-0"><%= msg %></p>
+                <% }) %>
+              </div>
+            <% } %>
+
+            <form action="/register" method="POST" id="registerForm" novalidate>
+              <div id="registerAlerts"></div>
+
+              <div class="row">
+                <div class="col-md-6 mb-3">
+                  <label for="username" class="form-label">Username</label>
+                  <input type="text" name="username" id="username" class="form-control" required>
+                </div>
+                <div class="col-md-6 mb-3">
+                  <label for="email" class="form-label">Email</label>
+                  <input type="email" name="email" id="email" class="form-control" required>
+                </div>
+              </div>
+
+              <div class="mb-3">
+                <label for="password" class="form-label">Password</label>
+                <input type="password" name="password" id="password" class="form-control" required>
+              </div>
+
+              <div class="row">
+                <div class="col-md-6 mb-3">
+                  <label for="address" class="form-label">Address</label>
+                  <input type="text" name="address" id="address" class="form-control" required>
+                </div>
+                <div class="col-md-6 mb-3">
+                  <label for="contact" class="form-label">Contact Number</label>
+                  <input type="tel" name="contact" id="contact" class="form-control" pattern="\d{8}" maxlength="8" required title="Enter 8 digit phone number">
+                </div>
+              </div>
+
+              <div class="mb-4">
+                <label for="role" class="form-label">Role</label>
+                <select name="role" id="role" class="form-select">
+                  <option value="user">User</option>
+                  <option value="admin">Admin</option>
+                </select>
+              </div>
+
+                <button type="submit" class="btn btn-success w-100">Register</button>
+            </form>
+
+            <div class="text-center mt-3 auth-footer">
+              Already have an account? <a href="/login">Login</a>
+            </div>
+          </div>
+        </div>
       </div>
-    <% } %>
-
-    <!-- ✅ FIXED FORM -->
-    <form action="/register" method="POST" id="registerForm">
-      <div class="mb-3">
-        <label for="username" class="form-label">Username</label>
-        <input type="text" name="username" id="username" class="form-control" required>
-      </div>
-
-      <div class="mb-3">
-        <label for="email" class="form-label">Email</label>
-        <input type="email" name="email" id="email" class="form-control" required>
-      </div>
-
-      <div class="mb-3">
-        <label for="password" class="form-label">Password</label>
-        <input type="password" name="password" id="password" class="form-control" required>
-      </div>
-
-      <div class="mb-3">
-        <label for="address" class="form-label">Address</label>
-        <input type="text" name="address" id="address" class="form-control">
-      </div>
-
-      <div class="mb-3">
-        <label for="contact" class="form-label">Contact Number</label>
-        <input type="text" name="contact" id="contact" class="form-control">
-      </div>
-
-      <div class="mb-4">
-        <label for="role" class="form-label">Role</label>
-        <select name="role" id="role" class="form-select">
-          <option value="user">User</option>
-          <option value="admin">Admin</option>
-        </select>
-      </div>
-
-      <!-- ✅ This button submits the form -->
-      <button type="submit" class="btn btn-success w-100">Register</button>
-    </form>
-  </div>
+    </div>
+  </section>
 
   <%- include('partials/footer') %>
 
   <script>
-    // debug script to confirm submission works
-    document.getElementById('registerForm').addEventListener('submit', () => {
-      console.log('🟢 Form submitted!');
-    });
+    // Client-side validation for register
+    (function () {
+      const form = document.getElementById('registerForm');
+      const alerts = document.getElementById('registerAlerts');
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+      form.addEventListener('submit', function (e) {
+        alerts.innerHTML = '';
+        const username = document.getElementById('username').value.trim();
+        const email = document.getElementById('email').value.trim();
+        const password = document.getElementById('password').value;
+        const address = document.getElementById('address').value.trim();
+        const contact = document.getElementById('contact').value.trim();
+
+        const errors = [];
+        if (!username || !email || !password || !address || !contact) {
+          errors.push('All fields are required.');
+        }
+        if (email && !emailRegex.test(email)) {
+          errors.push('Please enter a valid email address.');
+        }
+        if (contact && !/^\d{8}$/.test(contact)) {
+          errors.push('Contact number must be exactly 8 digits.');
+        }
+
+        if (errors.length) {
+          e.preventDefault();
+          alerts.innerHTML = '<div class="alert alert-danger">' + errors.map(err => '<div>' + err + '</div>').join('') + '</div>';
+          window.scrollTo({ top: alerts.getBoundingClientRect().top + window.scrollY - 80, behavior: 'smooth' });
+        }
+      });
+    })();
   </script>
 </body>
 </html>

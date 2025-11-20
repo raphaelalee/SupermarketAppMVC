@@ -48,6 +48,42 @@ a { text-decoration: none; }
   color: #555;
 }
 
+/* --- About Page --- */
+.about-hero {
+  background: linear-gradient(90deg,#eaf7ea,#ffffff);
+}
+
+.about-farm-card {
+  width: 240px;
+  border-radius: 18px;
+  overflow: hidden;
+  background: #fff;
+  border: 1px solid #eef2eb;
+  box-shadow: 0 14px 28px rgba(26, 97, 68, 0.12);
+}
+
+.about-farm-card img {
+  display: block;
+  width: 100%;
+  height: 170px;
+  object-fit: cover;
+}
+
+.about-farm-card figcaption {
+  padding: 0.65rem 1rem;
+  font-weight: 600;
+  color: #2d4338;
+  background: #fff;
+}
+
+@media (max-width: 576px) {
+  .about-farm-card {
+    width: 100%;
+    max-width: 260px;
+    margin: 0 auto;
+  }
+}
+
 /* --- Shopping Hero --- */
 .shopping-hero {
   background: linear-gradient(110deg, var(--sage-100), #f4f8ed);

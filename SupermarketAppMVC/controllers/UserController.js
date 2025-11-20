@@ -148,6 +148,9 @@ exports.registerUser = (req, res) => {
 };
 
 /* ========================================
+   RENDER FORGOT PASSWORD PAGE
+======================================== */
+/* ========================================
    RENDER LOGIN PAGE
 ======================================== */
 exports.renderLogin = (req, res) => {
@@ -172,6 +175,92 @@ exports.loginUser = (req, res) => {
 
   if (!email || !password) {
     req.flash("error", "Please enter your email and password.");
+    return res.redirect("/login");
+  }
+
+  Users.getByEmail(email, (err, results) => {
+    if (err || results.length === 0) {
+      req.flash("error", "User not found.");
+      return res.redirect("/login");
+    }
+
+    const user = results[0];
+
+    // Compare password
+    const match = bcrypt.compareSync(password, user.password);
+    if (!match) {
+      req.flash("error", "Incorrect password.");
+      return res.redirect("/login");
+    }
+
+    // Save to session
+    req.session.user = {
+      id: user.id,
+      username: user.username,
+      email: user.email,
+      role: user.role,
+    };
+
+    const redirectTo =
+      req.session.returnTo ||
+      (user.role === "admin" ? "/inventory" : "/shopping");
+    delete req.session.returnTo;
+
+    const sessionCart = req.session.cart || {};
+    UserCart.getCart(user.id, (cartErr, storedCart) => {
+      if (cartErr) {
+        console.error(`Failed to load saved cart for user ${user.id}:`, cartErr);
+        req.session.cart = sessionCart;
+        req.flash("success", "Welcome back, " + user.username + "!");
+        return res.redirect(redirectTo);
+      }
+
+      req.session.cart = mergeCarts(storedCart || {}, sessionCart);
+
+      persistSessionCartToDb(user.id, req.session.cart, (persistErr) => {
+        if (persistErr) {
+          console.error(`Failed to persist cart for user ${user.id}:`, persistErr);
+        }
+
+        req.flash("success", "Welcome back, " + user.username + "!");
+        return res.redirect(redirectTo);
+      });
+    });
+  });
+};
+
+/* ========================================
+   RENDER LOGIN PAGE
+======================================== */
+exports.renderLogin = (req, res) => {
+  // Clear any stale return path unless explicitly provided
+  if (req.query.next) {
+    req.session.returnTo = req.query.next;
+  } else {
+    delete req.session.returnTo;
+  }
+
+  res.render("login", {
+    messages: req.flash("error"),
+    success: req.flash("success"),
+  });
+};
+
+/* ========================================
+   LOGIN USER
+======================================== */
+exports.loginUser = (req, res) => {
+  const { email, password } = req.body;
+
+  if (!email || !password) {
+    req.flash("error", "Please enter your email and password.");
+    return res.redirect("/login");
+  }
+
+  // Validate email format early
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  if (!emailRegex.test(email)) {
+    req.flash("error", "Please enter a valid email address.");
     return res.redirect("/login");
   }
 

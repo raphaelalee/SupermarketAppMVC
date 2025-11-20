@@ -93,9 +93,7 @@ app.use((req, res, next) => {
   });
 });
 
-/* =====================
-      ROUTES 
-===================== */
+// Routes
 
 // Home
 app.get("/", SupermarketController.homePage);
@@ -124,6 +122,7 @@ app.post("/login", UserController.loginUser);
 app.get("/register", UserController.renderRegister);
 app.post("/register", UserController.registerUser);
 app.get("/logout", UserController.logoutUser);
+// (forgot/reset password routes removed)
 
 // Cart
 app.post("/add-to-cart/:id", CartController.addToCart);
