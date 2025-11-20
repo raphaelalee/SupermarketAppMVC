@@ -4,7 +4,7 @@ require('dotenv').config(); // Load variables from .env file
 
 // Create a MySQL connection pool (better than single connection)
 const db = mysql.createPool({
-  host: process.env.DB_HOST || 'localhost',
+  host: process.env.DB_HOST || '127.0.0.1',
   user: process.env.DB_USER || 'root',
   password: process.env.DB_PASSWORD || 'c207',
   database: process.env.DB_NAME || 'c372_supermarketdb',
@@ -17,9 +17,9 @@ const db = mysql.createPool({
 // Test the connection when server starts
 db.getConnection((err, connection) => {
   if (err) {
-    console.error('❌ Error connecting to MySQL:', err.message);
+    console.error(' Error connecting to MySQL:', err.message);
   } else {
-    console.log('✅ Connected to MySQL database');
+    console.log(' Connected to MySQL database');
     connection.release();
   }
 });
