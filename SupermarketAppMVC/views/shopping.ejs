@@ -7,10 +7,13 @@
       <h5>Categories</h5>
     </div>
     <ul class="category-list">
-      <% categories.forEach((cat) => { %>
+      <% (categories || []).forEach((cat) => {
+           const catName = cat && cat.category ? cat.category : cat;
+           if (!catName) return;
+      %>
         <li>
-          <a href="/shopping?category=<%= cat %>" class="<%= category === cat ? 'active' : '' %>">
-            <span><%= cat %></span>
+          <a href="/shopping?category=<%= encodeURIComponent(catName) %>" class="<%= category === catName ? 'active' : '' %>">
+            <span><%= catName %></span>
             <i class="bi bi-chevron-right"></i>
           </a>
         </li>
@@ -34,12 +37,20 @@
           class="form-control"
           name="search"
           placeholder="Search products or categories..."
-          value="<%= searchTerm %>">
-        <% if (category && category !== 'All') { %>
-          <input type="hidden" name="category" value="<%= category %>">
-        <% } %>
+          value="<%= search %>">
+        <select name="category" class="form-select">
+          <option value="">All Items</option>
+          <% (categories || []).forEach((c) => { 
+               const catName = c && c.category ? c.category : c;
+               if (!catName) return;
+          %>
+            <option value="<%= catName %>" <%= category === catName ? 'selected' : '' %>>
+              <%= catName %>
+            </option>
+          <% }) %>
+        </select>
         <button class="btn btn-success" type="submit">Search</button>
-        <% if (searchTerm) { %>
+        <% if (search) { %>
           <a href="/shopping" class="btn btn-outline-secondary">Clear</a>
         <% } %>
       </form>

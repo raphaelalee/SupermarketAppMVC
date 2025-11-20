@@ -1,13 +1,17 @@
 /* --- Palette --- */
 :root {
-  --sage-50: #edf5e3;
-  --sage-100: #dbe7d0;
-  --sage-200: #c9d8bb;
-  --sage-300: #b6c7a4;
-  --forest: #0b3d2e;
-  --forest-dark: #062718;
-  --cream: #f8f5ed;
-  --stone: #e3ddcf;
+  --sage-50: #f5f1e8;
+  --sage-100: #ece5d9;
+  --sage-200: #e2dac9;
+  --sage-300: #d7cdb8;
+  --forest: #2a7f5a;
+  --forest-dark: #1b5d43;
+  --brand-green: #34b67c;
+  --brand-green-hover: #239662;
+  --brand-green-dark: #1b6b4b;
+  --brand-green-muted: #f2faf5;
+  --cream: #fef9f1;
+  --stone: #f3eadc;
 }
 
 /* --- General --- */
@@ -26,7 +30,7 @@ a { text-decoration: none; }
   transition: color .2s;
 }
 .navbar .nav-link:hover {
-  color: #0f7c43 !important;
+  color: var(--brand-green) !important;
 }
 
 /* --- Hero Section --- */
@@ -37,7 +41,7 @@ a { text-decoration: none; }
 .hero-section h1 {
   font-size: 3rem;
   font-weight: 600;
-  color: #0f7c43;
+  color: var(--brand-green);
 }
 .hero-section p {
   font-size: 1.1rem;
@@ -87,11 +91,12 @@ a { text-decoration: none; }
 
 /* --- Buttons --- */
 .btn-success {
-  background-color: #0f7c43;
-  border-color: #0f7c43;
+  background-color: var(--brand-green);
+  border-color: var(--brand-green);
 }
 .btn-success:hover {
-  background-color: #0c6839;
+  background-color: var(--brand-green-hover);
+  border-color: var(--brand-green-hover);
 }
 .btn-pill-sm{
   border-radius: 999px;
@@ -680,7 +685,7 @@ body.cart-open {
 
 /* --- Footer --- */
 footer {
-  background-color: #0f7c43;
+  background-color: var(--brand-green);
   color: #fff;
 }
 .cart-container {
@@ -696,7 +701,7 @@ footer {
 }
 /* Left filter panel look */
 aside ul li a:hover {
-  color: #0f7c43;
+  color: var(--brand-green);
   text-decoration: underline;
 }
 .product-card {
@@ -709,7 +714,7 @@ aside ul li a:hover {
 }
 /* Aesthetic Rounded Button */
 .btn-pill {
-  background-color: #0F3D2E;        /* dark green */
+  background-color: var(--brand-green-dark, #0F3D2E);        /* dark green */
   color: white;
   padding: 10px 24px;
   border-radius: 40px;
@@ -734,7 +739,7 @@ aside ul li a:hover {
 
 /* Inventory Admin – Food-store style */
 .inventory-hero {
-  background: linear-gradient(120deg, #0f3d2e, #1d7c55);
+  background: linear-gradient(120deg, var(--forest-dark), var(--brand-green));
   color: #fff;
   padding: 4rem 0;
 }
@@ -927,7 +932,7 @@ aside ul li a:hover {
 }
 
 .toast-message.success {
-  background: linear-gradient(120deg, #0f7c43, #12a15e);
+  background: linear-gradient(120deg, var(--brand-green-dark, #1c6246), var(--brand-green));
 }
 
 .toast-message.error {

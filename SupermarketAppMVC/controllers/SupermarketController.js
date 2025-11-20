@@ -83,105 +83,90 @@ const resolveImageValue = (req, fallback = "placeholder.png") => {
  * SHOPPING PAGE + CART
  */
 exports.listAll = (req, res) => {
-  const category = (req.query.category || "All").trim();
-  const searchTermRaw = req.query.search || "";
-  const searchTerm = searchTermRaw.trim().toLowerCase();
+  const rawCategory = (req.query.category || "").trim();
+  const selectedCategory = rawCategory;
+  const searchRaw = req.query.search || "";
+  const search = searchRaw.trim();
 
-  Product.getAll((err, allProducts) => {
-    if (err) {
-      return res.render("shopping", {
-        products: [],
-        category,
-        displayCategory: "All Products",
-        categories: ["All"],
-        searchTerm: searchTermRaw,
-        user: req.session.user || null,
-        cart: [],
-        total: 0,
-        cartCount: 0,
-      });
+  Product.getCategories((catErr, categoryRows) => {
+    if (catErr) {
+      console.error("Failed to load categories:", catErr);
     }
+    const categories = (categoryRows || []).filter(
+      (row) => row && row.category
+    );
 
-    const categories = ["All"];
-    const categorySet = new Set();
-    allProducts.forEach((p) => {
-      const raw = (p.category || "").trim();
-      if (!raw) return;
-      const key = raw.toLowerCase();
-      if (categorySet.has(key)) return;
-      categorySet.add(key);
-      categories.push(raw.charAt(0).toUpperCase() + raw.slice(1));
-    });
+    Product.getFiltered(
+      { category: selectedCategory, search },
+      (productErr, products) => {
+        if (productErr) {
+          console.error("Failed to load products:", productErr);
+        }
+        const items = Array.isArray(products) ? products : [];
+        const cartObj = req.session.cart || {};
+        const cartIds = Object.keys(cartObj);
 
-    let filtered = Array.isArray(allProducts) ? [...allProducts] : [];
+        const renderPage = (cartItems, total, cartCount) => {
+          const displayCategory = search
+            ? `Search: ${searchRaw}`
+            : selectedCategory || "All Products";
 
-    if (searchTerm) {
-      filtered = filtered.filter((p) => {
-        const name = (p.productName || "").toLowerCase();
-        const cat = (p.category || "").toLowerCase();
-        return name.includes(searchTerm) || cat.includes(searchTerm);
-      });
-    } else if (category && category !== "All") {
-      filtered = filtered.filter(
-        (p) => (p.category || "").toLowerCase() === category.toLowerCase()
-      );
-    }
+          res.render("shopping", {
+            products: items,
+            categories,
+            category: selectedCategory,
+            search,
+            displayCategory,
+            user: req.session.user || null,
+            cart: cartItems,
+            total,
+            cartCount,
+          });
+        };
 
-    const displayCategory = searchTerm
-      ? `Search: ${searchTermRaw}`
-      : category === "All"
-      ? "All Products"
-      : category;
+        if (cartIds.length === 0) {
+          return renderPage([], 0, 0);
+        }
 
-    const cartObj = req.session.cart || {};
-    const cartIds = Object.keys(cartObj);
+        Product.getFiltered({}, (allErr, allProducts) => {
+          if (allErr) {
+            console.error("Failed to load cart products:", allErr);
+            return renderPage([], 0, 0);
+          }
 
-    if (cartIds.length === 0) {
-      return res.render("shopping", {
-        products: filtered,
-        category,
-        displayCategory,
-        categories,
-        searchTerm: searchTermRaw,
-        user: req.session.user || null,
-        cart: [],
-        total: 0,
-        cartCount: 0,
-      });
-    }
+          const byId = {};
+          (allProducts || []).forEach((p) => {
+            if (!p) return;
+            byId[String(p.id)] = p;
+          });
 
-    const byId = {};
-    allProducts.forEach((p) => (byId[p.id] = p));
+          let total = 0;
+          let cartCount = 0;
+          const cartItems = cartIds
+            .map((id) => {
+              const item = byId[id];
+              if (!item) return null;
+              const entry = cartObj[id];
+              const quantity =
+                typeof entry === "object" && entry !== null
+                  ? parseInt(entry.quantity, 10) || 0
+                  : parseInt(entry, 10) || 0;
+              if (quantity <= 0) return null;
 
-    let cartItems = [];
-    let total = 0;
-    let cartCount = 0;
+              const price = Number(item.price) || 0;
+              const subtotal = price * quantity;
 
-    cartItems = cartIds
-      .map((id) => {
-        const item = byId[id];
-        if (!item) return null;
-        const quantity = cartObj[id];
-        const subtotal = item.price * quantity;
+              total += subtotal;
+              cartCount += quantity;
 
-        total += subtotal;
-        cartCount += quantity;
+              return { ...item, quantity, subtotal };
+            })
+            .filter(Boolean);
 
-        return { ...item, quantity, subtotal };
-      })
-      .filter(Boolean);
-
-    res.render("shopping", {
-      products: filtered,
-      category,
-      displayCategory,
-      categories,
-      searchTerm: searchTermRaw,
-      user: req.session.user || null,
-      cart: cartItems,
-      total,
-      cartCount,
-    });
+          renderPage(cartItems, total, cartCount);
+        });
+      }
+    );
   });
 };
 

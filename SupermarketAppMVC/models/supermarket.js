@@ -71,4 +71,42 @@ module.exports = {
       }
     );
   },
+
+  getCategories(callback) {
+    const sql = `
+      SELECT DISTINCT category
+      FROM products
+      WHERE category IS NOT NULL AND category <> ''
+      ORDER BY category ASC
+    `;
+    db.query(sql, callback);
+  },
+
+  getFiltered(filters = {}, callback) {
+    const clauses = [];
+    const params = [];
+    const category =
+      typeof filters.category === "string" ? filters.category.trim() : "";
+    const search =
+      typeof filters.search === "string" ? filters.search.trim() : "";
+
+    if (category) {
+      clauses.push("category = ?");
+      params.push(category);
+    }
+
+    if (search) {
+      clauses.push("(productName LIKE ? OR category LIKE ?)");
+      const like = `%${search}%`;
+      params.push(like, like);
+    }
+
+    let sql = "SELECT * FROM products";
+    if (clauses.length) {
+      sql += " WHERE " + clauses.join(" AND ");
+    }
+    sql += " ORDER BY id DESC";
+
+    db.query(sql, params, callback);
+  },
 };

@@ -1,14 +1,99 @@
 // controllers/UserController.js
 const bcrypt = require("bcryptjs");
-const Users = require("../models/user");   // ✅ FIXED IMPORT
+const Users = require("../models/user");   // ? FIXED IMPORT
+const UserCart = require("../models/userCart");
+
+function normalizeCartEntry(entry) {
+  if (typeof entry === "object" && entry !== null) {
+    const qty = parseInt(entry.quantity, 10) || 0;
+    const selectedValue = entry.selected;
+    const selected =
+      selectedValue === false ||
+      selectedValue === "false" ||
+      selectedValue === 0
+        ? false
+        : true;
+    return { quantity: qty, selected };
+  }
+
+  return {
+    quantity: parseInt(entry, 10) || 0,
+    selected: true,
+  };
+}
+
+function mergeCarts(stored = {}, sessionCart = {}) {
+  const merged = { ...(stored || {}) };
+
+  Object.keys(sessionCart || {}).forEach((id) => {
+    const incoming = normalizeCartEntry(sessionCart[id]);
+    if (!incoming.quantity) return;
+
+    if (!merged[id]) {
+      merged[id] = { quantity: incoming.quantity, selected: incoming.selected };
+      return;
+    }
+
+    const current = normalizeCartEntry(merged[id]);
+    const shouldOverrideSelection =
+      typeof sessionCart[id] === "object" &&
+      sessionCart[id] !== null &&
+      Object.prototype.hasOwnProperty.call(sessionCart[id], "selected");
+
+    merged[id] = {
+      quantity: current.quantity + incoming.quantity,
+      selected: shouldOverrideSelection ? incoming.selected : current.selected,
+    };
+  });
+
+  return merged;
+}
+
+function persistSessionCartToDb(userId, cart, callback = () => {}) {
+  if (!userId) return callback();
+
+  const entries = Object.entries(cart || {}).filter(([_, entry]) => {
+    const qty =
+      typeof entry === "object" && entry !== null
+        ? parseInt(entry.quantity, 10) || 0
+        : parseInt(entry, 10) || 0;
+    return qty > 0;
+  });
+
+  UserCart.clearCart(userId, (clearErr) => {
+    if (clearErr) return callback(clearErr);
+
+    let index = 0;
+    const next = () => {
+      if (index >= entries.length) return callback();
+      const [productId, entry] = entries[index++];
+      const qty =
+        typeof entry === "object" && entry !== null
+          ? parseInt(entry.quantity, 10) || 0
+          : parseInt(entry, 10) || 0;
+
+      if (!qty) {
+        next();
+        return;
+      }
+
+      UserCart.setQuantity(userId, productId, qty, (err) => {
+        if (err) return callback(err);
+        next();
+      });
+    };
+
+    next();
+  });
+}
 
 /* ========================================
    RENDER REGISTER PAGE
 ======================================== */
 exports.renderRegister = (req, res) => {
-  res.render("register", { 
+  res.render("register", {
     messages: req.flash("error"),
-    success: req.flash("success")
+    success: req.flash("success"),
   });
 };
 
@@ -45,7 +130,7 @@ exports.registerUser = (req, res) => {
       password: hashedPassword,
       address,
       contact,
-      role: role || "user"
+      role: role || "user",
     };
 
     // Save new user
@@ -75,7 +160,7 @@ exports.renderLogin = (req, res) => {
 
   res.render("login", {
     messages: req.flash("error"),
-    success: req.flash("success")
+    success: req.flash("success"),
   });
 };
 
@@ -110,17 +195,34 @@ exports.loginUser = (req, res) => {
       id: user.id,
       username: user.username,
       email: user.email,
-      role: user.role
+      role: user.role,
     };
-
-    req.flash("success", "Welcome back, " + user.username + "!");
 
     const redirectTo =
       req.session.returnTo ||
       (user.role === "admin" ? "/inventory" : "/shopping");
     delete req.session.returnTo;
 
-    return res.redirect(redirectTo);
+    const sessionCart = req.session.cart || {};
+    UserCart.getCart(user.id, (cartErr, storedCart) => {
+      if (cartErr) {
+        console.error(`Failed to load saved cart for user ${user.id}:`, cartErr);
+        req.session.cart = sessionCart;
+        req.flash("success", "Welcome back, " + user.username + "!");
+        return res.redirect(redirectTo);
+      }
+
+      req.session.cart = mergeCarts(storedCart || {}, sessionCart);
+
+      persistSessionCartToDb(user.id, req.session.cart, (persistErr) => {
+        if (persistErr) {
+          console.error(`Failed to persist cart for user ${user.id}:`, persistErr);
+        }
+
+        req.flash("success", "Welcome back, " + user.username + "!");
+        return res.redirect(redirectTo);
+      });
+    });
   });
 };
 
@@ -128,7 +230,26 @@ exports.loginUser = (req, res) => {
    LOGOUT
 ======================================== */
 exports.logoutUser = (req, res) => {
-  req.session.destroy(() => {
-    res.redirect("/login");
+  const userId = req.session?.user?.id;
+  const cartData = req.session?.cart || {};
+
+  const finalize = () => {
+    req.session.destroy(() => {
+      res.redirect("/login");
+    });
+  };
+
+  if (!userId) {
+    return finalize();
+  }
+
+  persistSessionCartToDb(userId, cartData, (err) => {
+    if (err) {
+      console.error(
+        `Failed to persist cart before logout for user ${userId}:`,
+        err
+      );
+    }
+    finalize();
   });
 };

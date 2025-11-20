@@ -1,5 +1,6 @@
 // controllers/CheckoutController.js (session-based, no DB)
 const Order = require("../models/order");
+const UserCart = require("../models/userCart");
 
 exports.renderCheckout = (req, res) => {
   const cart = req.session.cart || {};
@@ -48,6 +49,16 @@ exports.processCheckout = (req, res) => {
     // Store order in session for receipt
     req.session.lastOrder = orderPayload;
     req.session.cart = {}; // Clear cart
+    if (req.session.user?.id) {
+      UserCart.clearCart(req.session.user.id, (clearErr) => {
+        if (clearErr) {
+          console.error(
+            `Failed to clear persisted cart for user ${req.session.user.id} after checkout:`,
+            clearErr
+          );
+        }
+      });
+    }
     req.flash("success", "Order placed successfully!");
     res.redirect(`/order/${orderNumber}`);
   });

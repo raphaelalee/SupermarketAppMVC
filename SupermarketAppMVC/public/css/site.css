@@ -2,8 +2,8 @@
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&family=Playfair+Display:wght@600;700&display=swap');
 
 :root{
-  --brand-green:#2f7a3e;
-  --brand-olive:#6aa84f;
+  --brand-green:#34b67c;
+  --brand-olive:#239662;
   --muted:#f5f7f5;
   --accent:#f2c94c;
   --text:#263238;
@@ -12,21 +12,21 @@ html,body{height:100%;}
 body{
   font-family: Inter, system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial;
   color:var(--text);
-  background: linear-gradient(180deg, #fbfdfb 0%, #f7fbf7 100%);
+  background: #fef9f1;
 }
 .navbar{
-  background: linear-gradient(90deg,var(--brand-green), #2b6f36);
-  box-shadow: 0 6px 18px rgba(43,111,54,0.12);
+  background: #ffffff;
+  box-shadow: 0 4px 14px rgba(0,0,0,0.06);
 }
-.navbar .navbar-brand{font-weight:700; color:#fff}
-.navbar .nav-link{color:rgba(255,255,255,0.9)}
+.navbar .navbar-brand{font-weight:700; color:var(--brand-green)}
+.navbar .nav-link{color:rgba(34,34,34,0.85)}
 .container.py-5{max-width:1100px}
 h2{color:var(--brand-green)}
 .table{border-radius:12px; overflow:hidden}
 .table thead th{background:var(--brand-green); color:#fff; border:0}
 .table tbody tr{background:#fff}
-.btn-primary{background:var(--brand-olive); border-color:var(--brand-olive)}
-.btn-primary:hover{background:#5aa647}
+.btn-primary{background:var(--brand-green); border-color:var(--brand-green)}
+.btn-primary:hover{background:var(--brand-olive); border-color:var(--brand-olive)}
 .btn-danger{background:#c94a3d; border-color:#c94a3d}
 .card-product{
   border-radius:12px; box-shadow: 0 6px 20px rgba(39,83,27,0.08); overflow:hidden; background:#fff;
@@ -76,7 +76,7 @@ footer{background:transparent}
 
 /* Hero CTA */
 .hero .btn-lg{background:var(--brand-green); border-color:var(--brand-green); color:#fff}
-.hero .btn-lg:hover{background:#25602b}
+.hero .btn-lg:hover{background:var(--brand-olive)}
 
 /* Product card refinements */
 .product-card .product-card-body{padding:1.2rem}
@@ -364,11 +364,11 @@ footer{background:transparent}
 .receipt-head h1{margin-bottom:0.35rem;}
 .receipt-total-card{
   min-width:240px;
-  background:#0f7c43;
+  background:var(--brand-green);
   color:#fff;
   border-radius:14px;
   padding:1.25rem;
-  box-shadow:0 15px 30px rgba(15,124,67,0.18);
+  box-shadow:0 15px 30px rgba(52,182,124,0.25);
   text-align:right;
 }
 .receipt-total-card .pill{background:rgba(255,255,255,0.15); color:#fff;}
