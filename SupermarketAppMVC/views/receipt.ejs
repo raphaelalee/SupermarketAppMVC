@@ -1,3 +1,13 @@
+
+<!--
+  NOTES (Receipt)
+  - If items show blank: the template expects each item to have `name` and `price`.
+    * Quick fix: edit the row below to fall back to other properties (we already added fallbacks).
+  - Pickup completed display: code below checks `order.deliveryStatus` or `order.pickedUp` / `order.pickedUpAt`.
+    * To change how pickup is marked complete, update server logic (controllers/AdminController or order update flow) to set `deliveryStatus = 'completed'` or `pickedUp = true`.
+  - Print / Save PDF button uses `window.print()` â€” safe to change label or hide for demo.
+-->
+
 <%- include('partials/header') %>
 
 <section class="invoice-wrap container py-5">
@@ -30,7 +40,23 @@
           <h6 class="text-muted mb-2">Delivery details</h6>
           <p class="mb-0 fw-semibold text-capitalize"><%= order.deliveryMethod || 'Standard' %></p>
           <p class="text-muted small mb-0">Delivery fee: S$ <%= Number(order.deliveryFee || 0).toFixed(2) %></p>
-          <p class="text-muted small mb-0">Status: <%= order.deliveryStatus || 'Processing' %></p>
+          <% 
+            // Determine status display: for pickup orders, show 'Completed' only when pickup is done.
+            let dispStatus = order.deliveryStatus || 'Processing';
+            const method = (order.deliveryMethod || '').toLowerCase();
+            if (method === 'pickup') {
+              // server may set deliveryStatus to 'completed' or provide a pickedUp boolean/timestamp
+              if (order.deliveryStatus && String(order.deliveryStatus).toLowerCase() === 'completed') {
+                dispStatus = 'Completed';
+              } else if (order.pickedUp || order.pickedUpAt) {
+                dispStatus = 'Completed';
+              } else {
+                // for pickup not yet collected, show ready or the existing status
+                dispStatus = order.deliveryStatus || 'Ready for pickup';
+              }
+            }
+          %>
+          <p class="text-muted small mb-0">Status: <%= dispStatus %></p>
         </div>
       </div>
     </section>
@@ -48,7 +74,7 @@
         <tbody>
           <% items.forEach((it) => { %>
             <tr>
-              <td><%= it.name %></td>
+              <td><%= it.name || it.productName || it.product_name || it.title || ('Item ' + (it.productId || it.id || '')) %></td>
               <td class="text-center"><%= it.quantity %></td>
               <td class="text-end">S$ <%= Number(it.price).toFixed(2) %></td>
               <td class="text-end fw-semibold">S$ <%= Number(it.subtotal || 0).toFixed(2) %></td>
@@ -89,7 +115,7 @@
     </section>
 
     <div class="d-flex justify-content-between align-items-center border-top pt-3 mt-4">
-      <p class="text-muted small mb-0">FreshMart Pte Ltd • hello@freshmart.sg • +65 6123 4567</p>
+      <p class="text-muted small mb-0">FreshMart Pte Ltd ï¿½ hello@freshmart.sg ï¿½ +65 6123 4567</p>
       <button class="btn btn-outline-secondary btn-sm" onclick="window.print()">Print / Save PDF</button>
     </div>
   </div>

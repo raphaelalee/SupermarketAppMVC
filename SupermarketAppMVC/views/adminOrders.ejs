@@ -1,3 +1,12 @@
+
+<!--
+  NOTES (Admin Orders Dashboard)
+  - This dashboard composes several data sections: totals, recentOrders, sales charts, low stock alerts.
+  - To add/remove cards, edit the corresponding `<div class="card">` block below. Keep Bootstrap grid classes in sync (col-*) to avoid layout shifts.
+  - We removed the 'Best selling products' card earlier; to re-add it, restore the `bestSellers` block near the 'Sales by category' card.
+  - If the charts show no data, they already render a friendly placeholder — the chart data is passed from `AdminController`.
+-->
+
 <%- include('partials/header') %>
 
 <% const totals = (dashboard && dashboard.totals) || { products: 0, orders: 0, revenue: 0 }; %>
@@ -141,28 +150,6 @@
   </div>
 
   <div class="row g-3 mb-4">
-    <div class="col-lg-6">
-      <div class="card shadow-sm border-0 h-100">
-        <div class="card-body">
-          <h5 class="card-title mb-3">Best selling products</h5>
-          <% if (!bestSellers.length) { %>
-            <p class="text-muted small mb-0">No sales yet.</p>
-          <% } else { %>
-            <ul class="list-group list-group-flush">
-              <% bestSellers.forEach(item => { %>
-                <li class="list-group-item px-0 d-flex justify-content-between align-items-center">
-                  <div>
-                    <p class="mb-0 fw-semibold"><%= item.productName %></p>
-                    <small class="text-muted">Sold <%= item.totalQuantity %> units</small>
-                  </div>
-                  <span class="fw-semibold text-success">S$ <%= Number(item.totalRevenue || 0).toFixed(2) %></span>
-                </li>
-              <% }) %>
-            </ul>
-          <% } %>
-        </div>
-      </div>
-    </div>
     <div class="col-lg-6">
       <div class="card shadow-sm border-0 h-100">
         <div class="card-body">

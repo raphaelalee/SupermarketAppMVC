@@ -10,6 +10,15 @@
 </head>
 <body class="bg-light">
 
+
+  <!--
+    NOTES (Register view)
+    - Validation: server enforces email `@gmail.com` and 8-digit contact. See `controllers/UserController.js` for server-side rules.
+      * If teacher asks to change the email rule, update both this client script and the controller to keep them in sync.
+    - The form has a hidden `role` field forced to `user` on the server. To allow admin creation, change server logic instead of only the UI.
+    - Common live edits: change placeholder text, add/remove fields. After edits, restart server if you modified controllers.
+  -->
+
   <%- include('partials/header') %>
 
   <section class="auth-hero">
@@ -22,25 +31,49 @@
               <div class="auth-sub">Create your account — shop fresh, fast</div>
             </div>
 
-            <% if (messages && messages.length > 0) { %>
-              <div class="alert alert-danger">
-                <% messages.forEach(msg => { %>
-                  <p class="mb-0"><%= msg %></p>
+            <% 
+              const serverMsgs = messages || [];
+              const emailMsgs = serverMsgs.filter(m => /email/i.test(m));
+              const contactMsgs = serverMsgs.filter(m => /contact|phone/i.test(m));
+              const usernameMsgs = serverMsgs.filter(m => /username/i.test(m));
+              const passwordMsgs = serverMsgs.filter(m => /password/i.test(m));
+              const addressMsgs = serverMsgs.filter(m => /address/i.test(m));
+              const otherMsgs = serverMsgs.filter(m => !/email|contact|phone|username|password|address/i.test(m));
+            %>
+
+            <% if (otherMsgs.length) { %>
+              <div class="mb-3">
+                <% otherMsgs.forEach(m => { %>
+                  <div class="text-danger small"><%= m %></div>
                 <% }) %>
               </div>
             <% } %>
 
             <form action="/register" method="POST" id="registerForm" novalidate>
-              <div id="registerAlerts"></div>
+              <input type="hidden" name="role" value="user">
 
               <div class="row">
                 <div class="col-md-6 mb-3">
                   <label for="username" class="form-label">Username</label>
                   <input type="text" name="username" id="username" class="form-control" required>
+                  <% if (usernameMsgs.length) { %>
+                    <% usernameMsgs.forEach(m => { %>
+                      <div class="invalid-feedback d-block"><%= m %></div>
+                    <% }) %>
+                  <% } else { %>
+                    <div class="invalid-feedback"></div>
+                  <% } %>
                 </div>
                 <div class="col-md-6 mb-3">
                   <label for="email" class="form-label">Email</label>
                   <input type="email" name="email" id="email" class="form-control" required>
+                  <% if (emailMsgs.length) { %>
+                    <% emailMsgs.forEach(m => { %>
+                      <div class="invalid-feedback d-block"><%= m %></div>
+                    <% }) %>
+                  <% } else { %>
+                    <div class="invalid-feedback"></div>
+                  <% } %>
                 </div>
               </div>
 
@@ -53,20 +86,28 @@
                 <div class="col-md-6 mb-3">
                   <label for="address" class="form-label">Address</label>
                   <input type="text" name="address" id="address" class="form-control" required>
+                  <% if (addressMsgs.length) { %>
+                    <% addressMsgs.forEach(m => { %>
+                      <div class="invalid-feedback d-block"><%= m %></div>
+                    <% }) %>
+                  <% } else { %>
+                    <div class="invalid-feedback"></div>
+                  <% } %>
                 </div>
                 <div class="col-md-6 mb-3">
                   <label for="contact" class="form-label">Contact Number</label>
                   <input type="tel" name="contact" id="contact" class="form-control" pattern="\d{8}" maxlength="8" required title="Enter 8 digit phone number">
+                  <% if (contactMsgs.length) { %>
+                    <% contactMsgs.forEach(m => { %>
+                      <div class="invalid-feedback d-block"><%= m %></div>
+                    <% }) %>
+                  <% } else { %>
+                    <div class="invalid-feedback"></div>
+                  <% } %>
                 </div>
               </div>
 
-              <div class="mb-4">
-                <label for="role" class="form-label">Role</label>
-                <select name="role" id="role" class="form-select">
-                  <option value="user">User</option>
-                  <option value="admin">Admin</option>
-                </select>
-              </div>
+              <!-- role is fixed to 'user' -->
 
                 <button type="submit" class="btn btn-success w-100">Register</button>
             </form>
@@ -88,6 +129,7 @@
       const form = document.getElementById('registerForm');
       const alerts = document.getElementById('registerAlerts');
       const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      const gmailRegex = /@gmail\.com$/i;
 
       form.addEventListener('submit', function (e) {
         alerts.innerHTML = '';
@@ -98,20 +140,49 @@
         const contact = document.getElementById('contact').value.trim();
 
         const errors = [];
-        if (!username || !email || !password || !address || !contact) {
-          errors.push('All fields are required.');
+        // clear previous inline errors
+        ['username','email','password','address','contact'].forEach(id => {
+          const el = document.getElementById(id);
+          if (el) el.classList.remove('is-invalid');
+          const fb = el && el.parentElement.querySelector('.invalid-feedback');
+          if (fb) fb.textContent = '';
+        });
+
+        if (!username) {
+          errors.push({ field: 'username', msg: 'Username is required.' });
         }
-        if (email && !emailRegex.test(email)) {
-          errors.push('Please enter a valid email address.');
+        if (!email) {
+          errors.push({ field: 'email', msg: 'Email is required.' });
+        } else if (!emailRegex.test(email)) {
+          errors.push({ field: 'email', msg: 'Please enter a valid email address.' });
+        } else if (!gmailRegex.test(email)) {
+          errors.push({ field: 'email', msg: 'Email must end with "@gmail.com".' });
         }
-        if (contact && !/^\d{8}$/.test(contact)) {
-          errors.push('Contact number must be exactly 8 digits.');
+        if (!password) {
+          errors.push({ field: 'password', msg: 'Password is required.' });
+        }
+        if (!address) {
+          errors.push({ field: 'address', msg: 'Address is required.' });
+        }
+        if (!contact) {
+          errors.push({ field: 'contact', msg: 'Contact number is required.' });
+        } else if (!/^\d{8}$/.test(contact)) {
+          errors.push({ field: 'contact', msg: 'Contact number must be exactly 8 digits.' });
         }
 
         if (errors.length) {
           e.preventDefault();
-          alerts.innerHTML = '<div class="alert alert-danger">' + errors.map(err => '<div>' + err + '</div>').join('') + '</div>';
-          window.scrollTo({ top: alerts.getBoundingClientRect().top + window.scrollY - 80, behavior: 'smooth' });
+          errors.forEach(err => {
+            const el = document.getElementById(err.field);
+            if (el) {
+              el.classList.add('is-invalid');
+              const fb = el.parentElement.querySelector('.invalid-feedback');
+              if (fb) fb.textContent = err.msg;
+            }
+          });
+          // scroll to first invalid field
+          const first = document.querySelector('.is-invalid');
+          if (first) first.scrollIntoView({ behavior: 'smooth', block: 'center' });
         }
       });
     })();

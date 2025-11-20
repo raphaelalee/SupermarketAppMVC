@@ -133,10 +133,10 @@ app.post("/cart/increase/:id", CartController.increaseQuantity);
 app.post("/cart/decrease/:id", CartController.decreaseQuantity);
 app.post("/cart/clear", CartController.clearCart);
 
-// Checkout
-app.get("/checkout", requireLogin, CheckoutController.renderCheckout);
-app.post("/checkout", requireLogin, CheckoutController.processCheckout);
-app.get("/order/:orderNumber", requireLogin, CheckoutController.renderReceipt);
+// Checkout (allow guest checkout and receipt viewing)
+app.get("/checkout", CheckoutController.renderCheckout);
+app.post("/checkout", CheckoutController.processCheckout);
+app.get("/order/:orderNumber", CheckoutController.renderReceipt);
 
 // Admin
 app.get("/admin/orders", requireLogin, requireAdmin, AdminController.ordersDashboard);

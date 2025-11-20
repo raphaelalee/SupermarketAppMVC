@@ -735,6 +735,47 @@ footer {
 .btn-link {
   text-decoration: none;
 }
+/* Checkout option layout and spacing */
+.checkout-option {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.85rem 0.75rem;
+  border-radius: 12px;
+  transition: background .12s ease, box-shadow .12s ease;
+}
+.checkout-option input[type="radio"] {
+  margin-right: 0.6rem;
+  width: 18px;
+  height: 18px;
+}
+.checkout-option:hover {
+  background: rgba(15,124,67,0.04);
+}
+.checkout-option .checkout-option-body {
+  flex: 1;
+}
+.checkout-option .price-tag{
+  font-weight:700;
+  color:var(--forest);
+  margin-left: 10px;
+}
+.payment-logo svg { display:block; }
+
+/* Security / AML note styling */
+.aml-note {
+  display:flex;
+  gap:0.75rem;
+  align-items:center;
+  margin-top:0.75rem;
+  padding:0.75rem 0.9rem;
+  border-radius:10px;
+  background: linear-gradient(90deg, rgba(15,124,67,0.04), rgba(15,124,67,0.02));
+  border:1px solid rgba(15,124,67,0.06);
+}
+.aml-note .shield {
+  width:36px; height:36px; border-radius:8px; background:var(--brand-green); display:grid; place-items:center; color:#fff; font-weight:700;
+}
 /* Left filter panel look */
 aside ul li a:hover {
   color: var(--brand-green);
@@ -1147,6 +1188,68 @@ aside ul li a:hover {
   .dashboard-filters {
     width: 100%;
     flex-direction: column;
+  }
+}
+/* Ensure main content can contain absolutely-positioned toasts */
+.main-content {
+  position: relative;
+}
+
+
+/* Align the flash toast container to the right side inside the main content area
+   so it won't cover product cards; toasts are stacked vertically and right-aligned. */
+#flashToastContainer {
+  left: auto !important;
+  right: 18px !important;
+  top: 18px !important;
+  transform: none !important;
+  max-width: 420px;
+  width: auto;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end; /* align toasts to the right edge */
+  gap: 0.75rem;
+  padding: 0 !important;
+}
+
+/* Toast appearance: compact, pill-like so it doesn't obscure the page */
+#flashToastContainer .toast {
+  width: auto;
+  max-width: 420px;
+  border-radius: 12px;
+  box-shadow: 0 12px 28px rgba(6, 39, 24, 0.16);
+  overflow: hidden;
+  padding: 0.25rem 0.5rem;
+}
+
+/* Success style (override bootstrap default to a nicer gradient) */
+#flashToastContainer .text-bg-success {
+  background: linear-gradient(90deg, var(--brand-green-dark, #1b6b4b), var(--brand-green));
+  color: #fff !important;
+}
+
+/* Error style */
+#flashToastContainer .text-bg-danger {
+  background: linear-gradient(90deg, #b3261e, #d9483f);
+  color: #fff !important;
+}
+
+/* Close button - use subtle white close placed inside toast */
+#flashToastContainer .btn-close {
+  filter: brightness(0.95) invert(1);
+}
+
+/* Small screens: make toasts full width with comfortable side padding */
+@media (max-width: 576px) {
+  #flashToastContainer {
+    left: 50% !important;
+    transform: translateX(-50%);
+    top: 12px !important;
+    width: calc(100% - 28px);
+  }
+  #flashToastContainer .toast {
+    max-width: 100%;
+    border-radius: 12px;
   }
 }
   

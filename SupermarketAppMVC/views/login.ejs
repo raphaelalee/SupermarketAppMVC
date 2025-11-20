@@ -1,11 +1,110 @@
+
+<!--
+  NOTES (Login view)
+  - Server-side flash messages are passed as `messages` (success) and `errors` (error) via connect-flash.
+    * If you add or rename flash keys in controllers, update the render logic here to display them.
+  - Client-side validation: simple checks are implemented here. For stricter rules, modify the inline script in this file.
+  - Common live edits: change copy (button text), add extra fields, or tweak CSS class names in `public/css/auth.css`.
+-->
+
 <%- include('partials/header') %>
-<div class="container py-5" style="max-width:400px;">
-  <h1 class="text-center mb-4">Login</h1>
-  <form method="POST" action="/login">
-    <div class="mb-3"><label>Email</label><input type="email" name="email" class="form-control" required></div>
-    <div class="mb-3"><label>Password</label><input type="password" name="password" class="form-control" required></div>
-    <button class="btn btn-success w-100">Login</button>
-  </form>
-  <p class="text-center mt-3">No account? <a href="/register">Register</a></p>
-</div>
+
+<link rel="stylesheet" href="/css/auth.css">
+
+<section class="auth-hero">
+  <div class="container">
+    <div class="d-flex justify-content-center">
+      <div class="card auth-card">
+        <div class="card-body">
+          <div class="text-center mb-3">
+            <div class="auth-brand">FreshMart</div>
+            <div class="auth-sub">Welcome back — sign in to continue</div>
+          </div>
+
+          <% 
+            const serverMsgs = messages || [];
+            const emailMsgs = serverMsgs.filter(m => /email/i.test(m));
+            const passwordMsgs = serverMsgs.filter(m => /password/i.test(m));
+            const otherMsgs = serverMsgs.filter(m => !/email|password/i.test(m));
+          %>
+
+          <% if (otherMsgs.length) { %>
+            <% otherMsgs.forEach(m => { %>
+              <div class="text-danger small mb-2"><%= m %></div>
+            <% }) %>
+          <% } %>
+
+          <form id="loginForm" method="POST" action="/login" novalidate>
+            <div class="mb-3">
+              <label class="form-label">Email</label>
+              <input type="email" name="email" id="loginEmail" class="form-control" required>
+              <% if (emailMsgs.length) { %>
+                <% emailMsgs.forEach(m => { %>
+                  <div class="invalid-feedback d-block"><%= m %></div>
+                <% }) %>
+              <% } else { %>
+                <div class="invalid-feedback"></div>
+              <% } %>
+            </div>
+            <div class="mb-3">
+              <label class="form-label">Password</label>
+              <input type="password" name="password" id="loginPassword" class="form-control" required>
+              <% if (passwordMsgs.length) { %>
+                <% passwordMsgs.forEach(m => { %>
+                  <div class="invalid-feedback d-block"><%= m %></div>
+                <% }) %>
+              <% } else { %>
+                <div class="invalid-feedback"></div>
+              <% } %>
+            </div>
+
+            <button class="btn btn-success w-100">Login</button>
+          </form>
+
+          <div class="text-center mt-3 auth-footer">
+            No account? <a href="/register">Create one</a>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<script>
+  (function () {
+    const form = document.getElementById('loginForm');
+    form.addEventListener('submit', function (e) {
+      // clear previous inline errors
+      ['loginEmail','loginPassword'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.classList.remove('is-invalid');
+        const fb = el && el.parentElement.querySelector('.invalid-feedback');
+        if (fb) fb.textContent = '';
+      });
+
+      const email = document.getElementById('loginEmail').value.trim();
+      const password = document.getElementById('loginPassword').value;
+      const errors = [];
+      const gmailCom = /@gmail\.com$/i;
+      if (!email) errors.push({ field: 'loginEmail', msg: 'Email is required.' });
+      else if (!gmailCom.test(email)) errors.push({ field: 'loginEmail', msg: 'Please use a Gmail address ending with @gmail.com.' });
+      if (!password) errors.push({ field: 'loginPassword', msg: 'Password is required.' });
+
+      if (errors.length) {
+        e.preventDefault();
+        errors.forEach(err => {
+          const el = document.getElementById(err.field);
+          if (el) {
+            el.classList.add('is-invalid');
+            const fb = el.parentElement.querySelector('.invalid-feedback');
+            if (fb) fb.textContent = err.msg;
+          }
+        });
+        const first = document.querySelector('.is-invalid');
+        if (first) first.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }
+    });
+  })();
+</script>
+
 <%- include('partials/footer') %>

@@ -11,6 +11,13 @@ exports.renderCheckout = (req, res) => {
   res.render("checkout", { total, items, user: req.session.user || null });
 };
 
+// NOTES (CheckoutController)
+// - processCheckout builds an `orderPayload` and stores it in `req.session.lastOrder` so the receipt can be shown immediately.
+//   * To persist orders permanently change `Order.createOrder` (models/order.js) or write to your DB and include an order lookup in `renderReceipt`.
+// - Pickup handling: mark an order as picked up by setting `order.deliveryStatus = 'completed'` or `order.pickedUp = true` on the server.
+// - Safe demo edits: change flash text, alter redirect target, or tweak fee calculation for test cases. Avoid changing core object keys unless you update views that read them.
+
+
 exports.processCheckout = (req, res) => {
   const items = res.locals.cartDetailed || [];
   if (!items.length) {
