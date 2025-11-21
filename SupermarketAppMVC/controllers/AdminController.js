@@ -11,6 +11,7 @@ const formatDateTime = (value) => {
   return d.toLocaleString("en-SG", { hour12: false });
 };
 
+// used for admin dashboards 
 const LOW_STOCK_THRESHOLD = 10;
 const LOW_STOCK_LIMIT = 5;
 const RECENT_ORDERS_LIMIT = 5;
