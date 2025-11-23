@@ -91,6 +91,16 @@
           <p class="price">$<%= product.price.toFixed(2) %></p>
           <div class="card-meta">
             <span>ID: <%= product.id %></span>
+              <% if (user && user.role === 'admin') { %>
+              <% const qty = Number(product.quantity || 0); %>
+              <% if (qty <= 0) { %>
+                <span class="badge bg-danger text-white">Out of stock</span>
+              <% } else if (qty <= 5) { %>
+                <span class="badge bg-warning text-dark">Stock: <strong><%= qty %></strong></span>
+              <% } else { %>
+                <span class="badge-qty">Stock: <strong><%= qty %></strong></span>
+              <% } %>
+              <% } %>
             <span>Image: <%= product.image %></span>
           </div>
         </div>
@@ -101,6 +111,11 @@
           <button class="action-btn danger" data-bs-toggle="modal" data-bs-target="#deleteModal-<%= product.id %>">
             <i class="bi bi-trash"></i>
           </button>
+          <% if (user && user.role === 'admin') { %>
+          <button class="action-btn" data-bs-toggle="modal" data-bs-target="#replenishModal-<%= product.id %>" title="Replenish stock">
+            <i class="bi bi-arrow-clockwise"></i>
+          </button>
+          <% } %>
         </div>
       </article>
 
@@ -120,6 +135,10 @@
 
                 <label class="form-label">Price</label>
                 <input type="number" class="form-control mb-1" step="0.01" name="price" value="<%= product.price %>" required min="0">
+                <div class="field-error text-danger small mb-3"></div>
+
+                <label class="form-label">Quantity</label>
+                <input type="number" class="form-control mb-1" name="quantity" value="<%= product.quantity || 0 %>" min="0" step="1" required>
                 <div class="field-error text-danger small mb-3"></div>
 
                 <label class="form-label">Category</label>
@@ -161,6 +180,26 @@
           </div>
         </div>
       </div>
+
+      <!-- Replenish Modal -->
+      <div class="modal fade" id="replenishModal-<%= product.id %>" tabindex="-1">
+        <div class="modal-dialog modal-dialog-centered">
+          <div class="modal-content admin-modal">
+            <div class="modal-header border-0">
+              <h5 class="modal-title">Replenish <%= product.productName %></h5>
+              <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+              <form action="/inventory/replenish/<%= product.id %>" method="POST" class="admin-form needs-validation" novalidate>
+                <label class="form-label">Add quantity</label>
+                <input type="number" class="form-control mb-1" name="increment" value="10" min="1" step="1" required>
+                <div class="text-muted small mb-3">Enter amount to add to current stock (default 10).</div>
+                <button class="btn btn-success w-100">Replenish</button>
+              </form>
+            </div>
+          </div>
+        </div>
+      </div>
     <% }) %>
   </div>
 </section>
@@ -183,6 +222,10 @@
           <input type="number" class="form-control mb-1" step="0.01" name="price" required min="0">
           <div class="field-error text-danger small mb-3"></div>
 
+          <label class="form-label">Quantity</label>
+          <input type="number" class="form-control mb-1" name="quantity" min="0" step="1" value="0" required>
+          <div class="field-error text-danger small mb-3"></div>
+
           <label class="form-label">Category</label>
           <select class="form-select mb-1" name="category" required>
             <option value="" disabled selected>Select a category</option>
@@ -201,7 +244,8 @@
       </div>
     </div>
   </div>
-</div>
+
+    </div>
 
 <script>
 document.addEventListener('DOMContentLoaded', () => {

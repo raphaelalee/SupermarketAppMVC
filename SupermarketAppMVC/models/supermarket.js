@@ -22,18 +22,21 @@ module.exports = {
     );
   },
 
-  create(productName, price, category, image, callback) {
+  // Accept an optional `quantity` parameter when creating a product. If not
+  // provided, default to 0.
+  create(productName, price, category, image, quantity = 0, callback) {
     db.query(
-      "INSERT INTO products (productName, price, category, image) VALUES (?, ?, ?, ?)",
-      [productName, price, category, image],
+      "INSERT INTO products (productName, price, category, image, quantity) VALUES (?, ?, ?, ?, ?)",
+      [productName, price, category, image, Number(quantity)],
       callback
     );
   },
 
-  update(id, productName, price, category, image, callback) {
+  // Update product fields including quantity.
+  update(id, productName, price, category, image, quantity = 0, callback) {
     db.query(
-      "UPDATE products SET productName=?, price=?, category=?, image=? WHERE id=?",
-      [productName, price, category, image, id],
+      "UPDATE products SET productName=?, price=?, category=?, image=?, quantity=? WHERE id=?",
+      [productName, price, category, image, Number(quantity), id],
       callback
     );
   },

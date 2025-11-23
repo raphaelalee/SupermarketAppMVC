@@ -269,9 +269,12 @@ exports.inventoryPage = (req, res) => {
  */
 exports.addProduct = (req, res) => {
   const { productName, price, category } = req.body;
+  // parse quantity from form (admin supplies when adding)
+  let quantity = parseInt(req.body.quantity, 10);
+  if (Number.isNaN(quantity) || quantity < 0) quantity = 0;
   const imageValue = resolveImageValue(req);
 
-  Product.create(productName, price, category, imageValue, (err) => {
+  Product.create(productName, price, category, imageValue, quantity, (err) => {
     if (err) {
       req.flash("error", "Failed to add product");
       return res.redirect("/inventory");
@@ -289,8 +292,11 @@ exports.updateProduct = (req, res) => {
   const id = req.params.id;
   const { productName, price, category } = req.body;
   const imageValue = resolveImageValue(req);
+  // parse quantity from form
+  let quantity = parseInt(req.body.quantity, 10);
+  if (Number.isNaN(quantity) || quantity < 0) quantity = 0;
 
-  Product.update(id, productName, price, category, imageValue, (err) => {
+  Product.update(id, productName, price, category, imageValue, quantity, (err) => {
     if (err) {
       req.flash("error", "Failed to update product");
       return res.redirect("/inventory");
@@ -298,6 +304,55 @@ exports.updateProduct = (req, res) => {
 
     req.flash("success", "Product updated successfully");
     res.redirect("/inventory");
+  });
+};
+
+/**
+ * Replenish product stock by a small admin-provided increment.
+ * POST /inventory/replenish/:id
+ * Body: { increment }
+ */
+exports.replenishStock = (req, res) => {
+  const id = req.params.id;
+  // parse increment (default 10)
+  let increment = parseInt(req.body.increment, 10);
+  if (Number.isNaN(increment) || !Number.isFinite(increment)) increment = 10;
+  if (increment < 0) increment = 0;
+
+  Product.getById(id, (err, results) => {
+    if (err) {
+      console.error(`Failed to load product ${id} for replenish:`, err);
+      req.flash('error', 'Unable to replenish stock.');
+      return res.redirect('/inventory');
+    }
+
+    const product = results && results[0];
+    if (!product) {
+      req.flash('error', 'Product not found.');
+      return res.redirect('/inventory');
+    }
+
+    const current = Number(product.quantity || 0);
+    const newQty = current + Number(increment);
+
+    // Use the existing update API to persist the new quantity
+    Product.update(
+      id,
+      product.productName,
+      product.price,
+      product.category,
+      product.image,
+      newQty,
+      (updateErr) => {
+        if (updateErr) {
+          console.error(`Failed to update quantity for ${id}:`, updateErr);
+          req.flash('error', 'Failed to replenish stock.');
+          return res.redirect('/inventory');
+        }
+        req.flash('success', `Replenished ${product.productName} by ${increment}. New stock: ${newQty}`);
+        return res.redirect('/inventory');
+      }
+    );
   });
 };
 

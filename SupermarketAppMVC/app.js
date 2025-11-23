@@ -115,6 +115,7 @@ app.post(
   SupermarketController.updateProduct
 );
 app.post("/inventory/delete/:id", SupermarketController.deleteProduct);
+app.post("/inventory/replenish/:id", requireLogin, requireAdmin, SupermarketController.replenishStock);
 
 // Auth
 app.get("/login", UserController.renderLogin);

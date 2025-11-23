@@ -65,10 +65,15 @@
               <p class="product-category"><%= product.category %></p>
               <h5><%= product.productName %></h5>
               <p class="product-price">$<%= product.price.toFixed(2) %></p>
-              <form action="/add-to-cart/<%= product.id %>" method="POST">
-                <input type="hidden" name="quantity" value="1">
-                <button class="btn btn-outline-success w-100">Add to Cart</button>
-              </form>
+              <% if (Number(product.quantity || 0) <= 0) { %>
+                <div class="mb-2"><span class="badge bg-danger">Out of stock</span></div>
+                <button class="btn btn-secondary w-100" disabled>Out of stock</button>
+              <% } else { %>
+                <form action="/add-to-cart/<%= product.id %>" method="POST">
+                  <input type="hidden" name="quantity" value="1">
+                  <button class="btn btn-outline-success w-100">Add to Cart</button>
+                </form>
+              <% } %>
             </div>
           </article>
         <% }) %>

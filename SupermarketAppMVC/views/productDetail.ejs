@@ -24,13 +24,20 @@
       <h2 class="fw-bold"><%= product.productName %></h2>
 
       <p class="text-muted">
-        Availability: <span class="fw-semibold"><%= product.quantity %> in stock</span>
+        Availability:
+        <% if (Number(product.quantity || 0) <= 0) { %>
+          <span class="badge bg-danger">Out of stock</span>
+        <% } else { %>
+          <span class="fw-semibold"><%= product.quantity %> in stock</span>
+        <% } %>
       </p>
 
       <h4 class="text-success fw-bold mb-3">$<%= product.price.toFixed(2) %></h4>
 
       <!-- Add to cart -->
-      <% if (user) { %>
+      <% if (Number(product.quantity || 0) <= 0) { %>
+        <button class="btn btn-secondary px-4" disabled>Out of stock</button>
+      <% } else if (user) { %>
         <form action="/add-to-cart/<%= product.id %>" method="POST" class="d-flex gap-2 align-items-center">
           <input type="number" name="quantity" value="1" min="1" class="form-control" style="width:100px;">
           <button class="btn btn-success px-4">Add to Cart</button>
