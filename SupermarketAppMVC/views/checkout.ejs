@@ -1,16 +1,4 @@
-﻿
-<!--
-  NOTES (Demo / Quick Edits)
-  - Common edits teachers ask for:
-    * Change delivery options text or fees: look for the radio inputs named "delivery" and the right-side .price-tag spans.
-    * Toggle/remove payment methods: payments are listed under 'Payment method' radios. Apple/Google Pay are UI placeholders (SVGs) — replace with <img> when you have official assets.
-    * Address validation: client-side check is at the bottom of this file (script). Update the unit pattern if you want stricter rules.
-    * Totals update: the JS function updateDelivery() recalculates totals — change currency formatting there if needed.
-  - Quick restart needed after edits: save file then restart the server (`node app.js`). Prefer small edits only during demo.
-  - If you break something, revert just this file: `git checkout -- views/checkout.ejs`
--->
-
-<%- include('partials/header') %>
+﻿<%- include('partials/header') %> // Include the standard site header
 
 <section class="checkout-shell" style="background:#f4f6f7;">
   <div class="container py-5">
@@ -22,7 +10,9 @@
 
     <div class="row g-4">
       <div class="col-lg-7">
+        // Main form that submits the order data to the server (CheckoutController.processCheckout)
         <form method="POST" action="/checkout" id="checkout-form" class="card border-0 shadow-sm p-4" novalidate>
+          // Hidden fields to pass selected delivery method and fee to the server
           <input type="hidden" name="deliveryMethod" id="deliveryMethod" value="standard">
           <input type="hidden" name="deliveryFee" id="deliveryFee" value="3.50">
 
@@ -33,6 +23,7 @@
             </div>
             <p class="text-muted small mb-3">Choose the option that works best for your schedule.</p>
             <div class="row g-3">
+              // Delivery Option 1: Standard
               <div class="col-12">
                 <label class="checkout-option d-flex align-items-center">
                   <input type="radio" name="delivery" value="standard" data-fee="3.50" checked>
@@ -43,6 +34,7 @@
                   <span class="price-tag">$3.50</span>
                 </label>
               </div>
+              // Delivery Option 2: Express
               <div class="col-12">
                 <label class="checkout-option d-flex align-items-center">
                   <input type="radio" name="delivery" value="express" data-fee="6.00">
@@ -53,6 +45,7 @@
                   <span class="price-tag">$6.00</span>
                 </label>
               </div>
+              // Delivery Option 3: Pickup (Free)
               <div class="col-12">
                 <label class="checkout-option d-flex align-items-center">
                   <input type="radio" name="delivery" value="pickup" data-fee="0">
@@ -73,6 +66,7 @@
               </div>
             </div>
 
+            // Section for mandatory shipping fields
             <div class="row g-3 mt-2" id="delivery-fields">
               <div class="col-12">
                 <label class="form-label small text-muted">Recipient name</label>
@@ -80,11 +74,13 @@
               </div>
               <div class="col-12">
                 <label class="form-label small text-muted">Contact number</label>
+                // Basic HTML pattern validation for phone number
                 <input type="tel" class="form-control" name="shippingPhone" placeholder="+65 8123 4567" pattern="\+?\d{8,15}" required>
               </div>
               <div class="col-12">
                 <label class="form-label small text-muted">Delivery address</label>
                 <textarea class="form-control" name="shippingAddress" rows="3" placeholder="Block / Unit / Postal code" required></textarea>
+                // Feedback element used by custom validation JS below
                 <div class="invalid-feedback" id="addr-feedback">Please put unit number and full address</div>
               </div>
             </div>
@@ -98,6 +94,7 @@
             <p class="text-muted small mb-3">Pick how you’d like to pay.</p>
             <div class="row g-3">
               <div class="col-12">
+                // Payment Option 1: PayNow (default)
                 <label class="checkout-option align-items-start">
                   <input type="radio" name="payment" value="paynow" checked>
                   <div class="checkout-option-body">
@@ -109,12 +106,12 @@
                   </div>
                 </label>
               </div>
+              // Other options (Apple Pay, Google Pay, Card) are mostly UI placeholders
               <div class="col-12">
                 <label class="checkout-option d-flex align-items-center">
                   <input type="radio" name="payment" value="applepay">
                   <div class="checkout-option-body d-flex align-items-center gap-3">
                     <div class="payment-logo" aria-hidden="true" style="width:44px;">
-                      <!-- Simple apple placeholder SVG; replace with official logo if desired -->
                       <svg width="44" height="28" viewBox="0 0 44 28" fill="none" xmlns="http://www.w3.org/2000/svg">
                         <rect rx="6" width="44" height="28" fill="#111" />
                         <text x="22" y="19" font-size="12" text-anchor="middle" fill="#fff" font-family="Arial,Helvetica,sans-serif">Apple</text>
@@ -133,7 +130,6 @@
                   <input type="radio" name="payment" value="gpay">
                   <div class="checkout-option-body d-flex align-items-center gap-3">
                     <div class="payment-logo" aria-hidden="true" style="width:44px;">
-                      <!-- Simple Google Pay placeholder -->
                       <svg width="60" height="28" viewBox="0 0 60 28" fill="none" xmlns="http://www.w3.org/2000/svg">
                         <rect rx="6" width="60" height="28" fill="#fff" stroke="#e6e6e6" />
                         <text x="30" y="19" font-size="12" text-anchor="middle" fill="#202124" font-family="Arial,Helvetica,sans-serif">G Pay</text>
@@ -146,7 +142,9 @@
                   </div>
                 </label>
               </div>
+              
               <div class="col-12">
+                // Payment Option 4: Card (activates conditional input fields)
                 <label class="checkout-option align-items-start">
                   <input type="radio" name="payment" value="card">
                   <div class="checkout-option-body">
@@ -157,6 +155,7 @@
               </div>
             </div>
 
+            // Conditional block for card payment details
             <div class="card-fields mt-3" id="card-fields">
               <div class="row g-3">
                 <div class="col-12">
@@ -165,6 +164,7 @@
                 </div>
                 <div class="col-12">
                   <label class="form-label small text-muted">Card number</label>
+                  // Input validation via HTML pattern and maxlength
                   <input type="text" class="form-control" name="cardNumber" placeholder="1111 2222 3333 4444" maxlength="19" pattern="\d{13,19}" required>
                 </div>
                 <div class="col-6">
@@ -185,11 +185,13 @@
       </div>
 
       <div class="col-lg-5">
+        // Aside: Order Summary Card
         <aside class="card border-0 shadow-sm p-4 mb-4">
           <h5 class="mb-3 fw-semibold">Order summary</h5>
           <div class="border rounded-3 mb-3">
             <table class="table mb-0 align-middle">
               <tbody>
+                <% // Loops through items (passed as 'items' from the server) %>
                 <% if ((items || []).length === 0) { %>
                   <tr>
                     <td class="text-muted small" colspan="3">Your basket is empty.</td>
@@ -200,10 +202,10 @@
                       <td style="width:56px;">
                         <img src="/images/<%= it.image || 'broccoli.png' %>" alt="<%= it.productName %>" class="img-fluid rounded" style="max-width:48px;">
                       </td>
-                          <td>
-                            <p class="mb-0 fw-semibold"><%= it.productName %></p>
-                            <p class="text-muted small mb-0">Qty <%= it.quantity %> • $<%= Number(it.price).toFixed(2) %></p>
-                          </td>
+                      <td>
+                        <p class="mb-0 fw-semibold"><%= it.productName %></p>
+                        <p class="text-muted small mb-0">Qty <%= it.quantity %> • $<%= Number(it.price).toFixed(2) %></p>
+                      </td>
                       <td class="text-end fw-semibold">$<%= Number(it.subtotal || 0).toFixed(2) %></td>
                     </tr>
                   <% }) %>
@@ -213,10 +215,12 @@
           </div>
           <div class="summary-row">
             <span>Subtotal</span>
+            // Displays the product subtotal (calculated in the backend or middleware)
             <strong id="summary-subtotal">S$ <%= total.toFixed(2) %></strong>
           </div>
           <div class="summary-row">
             <span>Delivery</span>
+            // This fee is updated dynamically by the JavaScript below
             <strong id="summary-delivery">S$ 3.50*</strong>
           </div>
           <div class="summary-row">
@@ -226,6 +230,7 @@
           <p class="text-muted small mb-3">*Exact amount updates when you change the delivery option.</p>
           <div class="summary-row total-row">
             <span>Amount due</span>
+            // This is the final calculated total (subtotal + delivery fee)
             <strong id="summary-total">S$ <%= (total + 3.5).toFixed(2) %></strong>
           </div>
         </aside>
@@ -247,12 +252,13 @@
 
 <script>
   (function() {
+    // --- Get DOM Elements and Server-Side Subtotal ---
     const deliveryRadios = document.querySelectorAll('input[name="delivery"]');
     const deliveryMethodInput = document.getElementById('deliveryMethod');
     const deliveryFeeInput = document.getElementById('deliveryFee');
     const summaryDelivery = document.getElementById('summary-delivery');
     const summaryTotal = document.getElementById('summary-total');
-    const subtotal = <%= total.toFixed(2) %>;
+    const subtotal = <%= total.toFixed(2) %>; // Subtotal injected from EJS (server-side)
     const cardFields = document.getElementById('card-fields');
     const paymentRadios = document.querySelectorAll('input[name="payment"]');
     const deliveryFields = document.getElementById('delivery-fields');
@@ -262,76 +268,90 @@
     const shippingAddressEl = checkoutForm.querySelector('[name="shippingAddress"]');
     const shippingPhoneEl = checkoutForm.querySelector('[name="shippingPhone"]');
 
+    // Helper to format currency for display
     function formatMoney(val) {
       return 'S$ ' + Number(val).toFixed(2);
     }
 
+    // --- Delivery Logic: Updates Fees and Hides Shipping Fields for Pickup ---
     function updateDelivery() {
       const selected = Array.from(deliveryRadios).find(r => r.checked);
       const fee = selected ? Number(selected.dataset.fee || 0) : 0;
+      
+      // Update hidden form fields for submission
       deliveryMethodInput.value = selected ? selected.value : 'standard';
       deliveryFeeInput.value = fee.toFixed(2);
+      
+      // Update display in the Order Summary aside
       summaryDelivery.textContent = formatMoney(fee) + '*';
       summaryTotal.textContent = formatMoney(Number(subtotal) + fee);
 
+      // Handles toggling delivery fields for 'Store Pickup' option
       if (deliveryFields) {
         const isPickup = selected && selected.value === 'pickup';
         deliveryFields.style.display = isPickup ? 'none' : 'flex';
         deliveryFields.style.flexDirection = 'column';
+        // Toggles the 'required' and 'disabled' attributes on all input fields
         deliveryInputs.forEach((input) => {
-          input.required = !isPickup;
+          input.required = !isPickup; 
           input.disabled = isPickup;
         });
       }
     }
 
+    // --- Payment Logic: Toggles Card Details Block ---
     function togglePaymentBlocks() {
       const selected = Array.from(paymentRadios).find(r => r.checked);
       const payment = selected ? selected.value : '';
-      const showCard = payment === 'card';
+      const showCard = payment === 'card'; // Only show fields if 'Card' is selected
+      
       cardFields.style.display = showCard ? 'block' : 'none';
+      // Toggles the 'required' and 'disabled' attributes on card fields for validation
       cardInputs.forEach((input) => {
         input.required = showCard;
         input.disabled = !showCard;
       });
     }
 
+    // Attach event listeners to update UI when delivery or payment changes
     deliveryRadios.forEach(r => r.addEventListener('change', updateDelivery));
     paymentRadios.forEach(r => r.addEventListener('change', togglePaymentBlocks));
     updateDelivery();
     togglePaymentBlocks();
 
+    // --- Custom Form Validation (on submit) ---
     checkoutForm.addEventListener('submit', (event) => {
-      // Reset custom validity before validating
+      // Reset custom validity to re-check all fields
       if (shippingAddressEl) shippingAddressEl.setCustomValidity('');
 
-      // If pickup is NOT selected, require shipping address and ensure it contains a unit number
       const selectedDelivery = Array.from(deliveryRadios).find(r => r.checked);
       const isPickup = selectedDelivery && selectedDelivery.value === 'pickup';
 
+      // Custom check: If NOT pickup, ensure the address contains a unit number/block info
       if (!isPickup && shippingAddressEl) {
         const addr = shippingAddressEl.value || '';
-        // Accept addresses that include common unit indicators: '#', '-', 'Unit' or 'Blk'
+        // Regex pattern looks for '#', 'Unit', 'Blk', or a unit range (e.g., '12-34', '123-01')
         const unitPattern = /(#|Unit|Blk|\d+[-]\d+|unit|blk)/i;
         if (!unitPattern.test(addr)) {
           const msg = 'Please put unit number and full address';
-          shippingAddressEl.setCustomValidity(msg);
+          shippingAddressEl.setCustomValidity(msg); // Forces HTML validation failure
           const fb = document.getElementById('addr-feedback');
           if (fb) fb.textContent = msg;
           shippingAddressEl.classList.add('is-invalid');
         }
       }
 
+      // Standard HTML5 form validation check
       if (!checkoutForm.checkValidity()) {
-        event.preventDefault();
+        event.preventDefault(); // Stop form submission
         event.stopPropagation();
-        checkoutForm.classList.add('was-validated');
-        // If shipping address invalid, focus it for convenience
+        checkoutForm.classList.add('was-validated'); // Triggers Bootstrap validation styling
+        // Focus on the address field if it's the one that failed validation
         if (shippingAddressEl && !shippingAddressEl.checkValidity()) shippingAddressEl.focus();
       }
     });
 
-    // Clear custom validity when user edits the address or delivery choice
+    // Clear custom address validation message when user starts typing
     const addrFeedbackEl = document.getElementById('addr-feedback');
     if (shippingAddressEl) {
       shippingAddressEl.addEventListener('input', () => {
@@ -340,6 +360,7 @@
         if (addrFeedbackEl) addrFeedbackEl.textContent = 'Please put unit number and full address';
       });
     }
+    // Also clear address validation state if the user switches back to 'Pickup'
     deliveryRadios.forEach(r => r.addEventListener('change', () => {
       if (shippingAddressEl) {
         shippingAddressEl.setCustomValidity('');

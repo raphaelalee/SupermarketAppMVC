@@ -1,34 +1,47 @@
+<% // --- Server-side variable setup (from app.js middleware) --- %>
 <% const items = Array.isArray(cartDetailed) ? cartDetailed : []; %>
+<% // Calculates total value, using the pre-calculated cartTotal or calculating a fallback value %>
 <% const totalValue = typeof cartTotal !== "undefined" ? Number(cartTotal) : items.reduce((sum, it) => sum + (it.subtotal || 0), 0); %>
+<% // Calculates item count, using the pre-calculated cartCount or calculating a fallback count %>
 <% const fallbackCount = items.reduce((sum, it) => sum + (it.quantity || 0), 0); %>
-<% const isLoggedIn = !!user; %>
-<% const hasItems = items.length > 0; %>
+<% const isLoggedIn = !!user; %> // Checks if a user object exists in the session (logged in)
+<% const hasItems = items.length > 0; %> // Checks if the cart contains any items
 
 <aside id="cart-drawer" class="cart-drawer" aria-live="polite">
   <div class="cart-header">
-    <h5>Cart (<span id="cart-count" data-cart-count><%= typeof cartCount !== "undefined" ? cartCount : fallbackCount %></span>)</h5>
+    <h5>
+      // Displays total number of items in the cart
+      Cart (<span id="cart-count" data-cart-count><%= typeof cartCount !== "undefined" ? cartCount : fallbackCount %></span>)
+    </h5>
     <button id="cart-close" class="btn-close" aria-label="Close cart">&times;</button>
   </div>
 
   <div class="cart-body">
+    // Conditional display: Shows this text only if there are NO items (hasItems is false)
     <p class="text-muted <%= items.length ? "d-none" : "" %>" data-cart-empty>Your cart is empty.</p>
 
+    // Conditional display: Shows this container only if there ARE items
     <div class="cart-items <%= items.length ? "" : "d-none" %>" data-cart-items>
+      <% // Loops through each item in the cart to render individual rows %>
       <% items.forEach((it) => { %>
         <div class="cart-item" data-id="<%= it.id %>" data-price="<%= Number(it.price || 0).toFixed(2) %>">
           <div class="cart-item-left">
+            // Displays product image, with a fallback image if none is provided
             <img src="/images/<%= it.image || "broccoli.png" %>" alt="<%= it.productName %>" class="cart-thumb">
           </div>
           <div class="cart-item-right">
             <div class="cart-item-top">
               <div>
                 <div class="cart-item-title"><%= it.productName %></div>
+                // Displays price and quantity
                 <div class="cart-item-meta">$<%= (it.price || 0).toFixed(2) %> &middot; Qty: <span class="cart-item-qty"><%= it.quantity %></span></div>
               </div>
+              // Displays the calculated subtotal for the item (price * quantity)
               <div class="cart-line-price">$<%= (it.subtotal || 0).toFixed(2) %></div>
             </div>
             <div class="cart-item-actions">
               <div class="qty-shell">
+                // Buttons for client-side quantity management (calls cart.js logic)
                 <button class="btn btn-sm btn-outline-secondary qty-decrease">-</button>
                 <span class="qty-value"><%= it.quantity %></span>
                 <button class="btn btn-sm btn-outline-secondary qty-increase">+</button>
@@ -44,11 +57,16 @@
   <div class="cart-footer">
     <div class="cart-summary">
       <div>Estimated total</div>
+      // Displays the running total for all items in the cart
       <div id="cart-total">$<%= Number(totalValue || 0).toFixed(2) %></div>
     </div>
     <form action="<%= isLoggedIn ? '/checkout' : '/login' %>" method="get">
-      <button id="checkout-btn" class="btn btn-primary w-100" <%= hasItems ? '' : 'disabled' %>><%= isLoggedIn ? 'Checkout' : 'Log in to checkout' %></button>
+      <button id="checkout-btn" class="btn btn-primary w-100" 
+        // Button is disabled if there are no items (hasItems is false)
+        // Button text and target link change based on whether the user is logged in
+        <%= hasItems ? '' : 'disabled' %>><%= isLoggedIn ? 'Checkout' : 'Log in to checkout' %></button>
     </form>
+    <% // Conditional display: Only shows these links/messages if the user is NOT logged in %>
     <% if (!isLoggedIn) { %>
       <a href="/register" class="btn btn-link w-100">Create an account</a>
       <p class="text-muted small mt-2">Log in or sign up to complete your purchase.</p>
@@ -58,4 +76,5 @@
 
 <div class="cart-overlay" id="cart-overlay"></div>
 
+// Links the necessary JavaScript file for interactive cart actions
 <script src="/js/cart.js" defer></script>

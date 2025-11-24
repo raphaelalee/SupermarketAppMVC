@@ -1,34 +1,40 @@
-<%- include('partials/header') %>
+<%- include('partials/header') %> // Includes the header partial (likely contains navigation, etc.)
 
 <section class="container py-4">
   <div class="d-flex justify-content-between align-items-center flex-wrap gap-3 mb-3">
     <div>
       <a href="/admin/orders" class="text-decoration-none small text-muted">&larr; Back to orders</a>
+      // Displays the unique Order Number
       <h1 class="h4 fw-semibold mt-2 mb-0">Order <%= order.orderNumber %></h1>
+      // Displays the date and time the order was placed
       <p class="text-muted small mb-0">Placed <%= order.displayDate || '-' %></p>
     </div>
     <div class="d-flex gap-2">
+      // Button to download the PDF receipt, linking to the AdminController's download function
       <a class="btn btn-outline-secondary" href="/admin/orders/<%= order.id %>/receipt" target="_blank">
         <i class="bi bi-file-earmark-arrow-down me-1"></i>Download receipt
       </a>
+      // Badge showing the current order status (capitalized)
       <span class="badge bg-dark-subtle text-dark fw-semibold text-uppercase align-self-center">
         <%= order.status.charAt(0).toUpperCase() + order.status.slice(1) %>
       </span>
     </div>
   </div>
 
+  <% // --- Display Flash Messages and Errors --- %>
   <% if ((errors && errors.length) || (messages && messages.length)) { %>
     <div class="mb-3">
       <% (errors || []).forEach(msg => { %>
-        <div class="alert alert-danger py-2 mb-2"><%= msg %></div>
+        <div class="alert alert-danger py-2 mb-2"><%= msg %></div> // Displays error messages
       <% }) %>
       <% (messages || []).forEach(msg => { %>
-        <div class="alert alert-success py-2 mb-2"><%= msg %></div>
+        <div class="alert alert-success py-2 mb-2"><%= msg %></div> // Displays success messages
       <% }) %>
     </div>
   <% } %>
 
   <div class="row g-3 mb-4">
+    // Card 1: Customer Information
     <div class="col-md-4">
       <div class="card shadow-sm border-0 h-100">
         <div class="card-body">
@@ -39,6 +45,7 @@
         </div>
       </div>
     </div>
+    // Card 2: Payment and Delivery Methods
     <div class="col-md-4">
       <div class="card shadow-sm border-0 h-100">
         <div class="card-body">
@@ -48,11 +55,14 @@
         </div>
       </div>
     </div>
+    // Card 3: Financial Summary
     <div class="col-md-4">
       <div class="card shadow-sm border-0 h-100">
         <div class="card-body">
           <p class="text-muted small text-uppercase mb-1">Order total</p>
+          // Final total amount
           <h5 class="mb-1">S$ <%= Number(order.total || 0).toFixed(2) %></h5>
+          // Breakdown of subtotal and fees
           <p class="mb-0 small text-muted">
             Subtotal S$ <%= Number(order.subtotal || 0).toFixed(2) %> &middot;
             Delivery S$ <%= Number(order.deliveryFee || 0).toFixed(2) %>
@@ -66,26 +76,31 @@
     <div class="card-body">
       <h5 class="card-title mb-3">Status timeline</h5>
       <div class="d-flex flex-wrap gap-3">
+        <% // Loops through the 'timeline' array (generated in AdminController) %>
         <% timeline.forEach(step => { %>
           <div class="d-flex align-items-center gap-2">
+            // Badge highlights green for completed steps, grey for pending steps
             <span class="badge <%= step.complete ? 'bg-success-subtle text-success' : 'bg-light text-muted' %>">
               <%= step.label %>
             </span>
+            // Displays an arrow between steps, but not after the last step
             <% if (step.value !== timeline[timeline.length - 1].value) { %>
               <i class="bi bi-arrow-right text-muted"></i>
             <% } %>
           </div>
         <% }) %>
       </div>
+      // Form for the admin to change the order status
       <form action="/admin/orders/<%= order.id %>/status" method="POST" class="mt-3 d-flex flex-wrap gap-2">
         <select class="form-select" name="status" style="max-width:220px">
+          <% // Populates the dropdown menu with all available statuses %>
           <% statuses.forEach(value => { %>
             <option value="<%= value %>" <%= order.status === value ? 'selected' : '' %>>
               <%= value.charAt(0).toUpperCase() + value.slice(1) %>
             </option>
           <% }) %>
         </select>
-        <button class="btn btn-success">Update status</button>
+        <button class="btn btn-success">Update status</button> // Submits the new status
       </form>
     </div>
   </div>
@@ -99,6 +114,7 @@
         <div class="table-responsive">
           <table class="table">
             <thead>
+              // Table headers
               <tr>
                 <th>Name</th>
                 <th class="text-end">Price</th>
@@ -107,6 +123,7 @@
               </tr>
             </thead>
             <tbody>
+              <% // Renders a table row for each item in the order %>
               <% items.forEach(item => { %>
                 <tr>
                   <td><%= item.name %></td>
@@ -123,4 +140,4 @@
   </div>
 </section>
 
-<%- include('partials/footer') %>
+<%- include('partials/footer') %> // Includes the footer partial
