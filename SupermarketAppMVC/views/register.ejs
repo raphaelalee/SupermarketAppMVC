@@ -33,18 +33,28 @@
 
             <% 
               const serverMsgs = messages || [];
+              const serverSuccess = (typeof success !== 'undefined' && success) ? (Array.isArray(success) ? success : [success]) : [];
               const emailMsgs = serverMsgs.filter(m => /email/i.test(m));
               const contactMsgs = serverMsgs.filter(m => /contact|phone/i.test(m));
               const usernameMsgs = serverMsgs.filter(m => /username/i.test(m));
-              const passwordMsgs = serverMsgs.filter(m => /password/i.test(m));
+              const passwordMsgs = serverMsgs.filter(m => /password|special character|Password must/i.test(m));
               const addressMsgs = serverMsgs.filter(m => /address/i.test(m));
-              const otherMsgs = serverMsgs.filter(m => !/email|contact|phone|username|password|address/i.test(m));
+              const otherMsgs = serverMsgs.filter(m => !/email|contact|phone|username|password|address|special character|Password must/i.test(m));
             %>
 
-            <% if (otherMsgs.length) { %>
-              <div class="mb-3">
-                <% otherMsgs.forEach(m => { %>
-                  <div class="text-danger small"><%= m %></div>
+            <% if ((serverMsgs && serverMsgs.length) || (serverSuccess && serverSuccess.length)) { %>
+              <div id="flashPopup" class="position-fixed top-0 end-0 p-3" style="z-index:1080;">
+                <% serverMsgs.forEach(m => { %>
+                  <div class="alert alert-danger alert-dismissible fade show mb-2" role="alert">
+                    <%= m %>
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                  </div>
+                <% }) %>
+                <% serverSuccess.forEach(m => { %>
+                  <div class="alert alert-success alert-dismissible fade show mb-2" role="alert">
+                    <%= m %>
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                  </div>
                 <% }) %>
               </div>
             <% } %>
@@ -79,7 +89,11 @@
 
               <div class="mb-3">
                 <label for="password" class="form-label">Password</label>
-                <input type="password" name="password" id="password" class="form-control" required>
+                <div class="input-group">
+                  <input type="password" name="password" id="password" class="form-control" required aria-describedby="registerTogglePassword">
+                  <button class="btn btn-outline-secondary" type="button" id="registerTogglePassword" aria-pressed="false" aria-label="Show password">Show</button>
+                </div>
+                <div class="form-text small text-muted">Password must be at least 6 characters and include an uppercase letter, a digit, and a special character (e.g. !@#$%).</div>
               </div>
 
               <div class="row">
@@ -127,12 +141,12 @@
     // Client-side validation for register
     (function () {
       const form = document.getElementById('registerForm');
-      const alerts = document.getElementById('registerAlerts');
+      const alerts = document.getElementById('registerAlerts') || null;
       const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
       const gmailRegex = /@gmail\.com$/i;
 
       form.addEventListener('submit', function (e) {
-        alerts.innerHTML = '';
+        if (alerts) alerts.innerHTML = '';
         const username = document.getElementById('username').value.trim();
         const email = document.getElementById('email').value.trim();
         const password = document.getElementById('password').value;
@@ -160,6 +174,12 @@
         }
         if (!password) {
           errors.push({ field: 'password', msg: 'Password is required.' });
+        } else if (password.length < 6) {
+          errors.push({ field: 'password', msg: 'Password must be at least 6 characters.' });
+        } else if (!/[A-Z]/.test(password) || !/\d/.test(password)) {
+          errors.push({ field: 'password', msg: 'Password must include at least one uppercase letter and one digit.' });
+        } else if (!/[!@#$%^&*(),.?":{}|<>]/.test(password)) {
+          errors.push({ field: 'password', msg: 'Password must include at least one special character.' });
         }
         if (!address) {
           errors.push({ field: 'address', msg: 'Address is required.' });
@@ -180,11 +200,68 @@
               if (fb) fb.textContent = err.msg;
             }
           });
+          // Also show a floating flash popup for client-side validation errors
+          try {
+            const msgs = errors.map(e => e.msg);
+            showFlashPopup(msgs, 'danger');
+          } catch (ignore) {}
           // scroll to first invalid field
           const first = document.querySelector('.is-invalid');
           if (first) first.scrollIntoView({ behavior: 'smooth', block: 'center' });
         }
       });
+    })();
+    // Setup password visibility toggle for register form
+    (function () {
+      function setupPasswordToggle(toggleId, inputId) {
+        const btn = document.getElementById(toggleId);
+        const input = document.getElementById(inputId);
+        if (!btn || !input) return;
+        btn.addEventListener('click', function () {
+          const isHidden = input.type === 'password';
+          input.type = isHidden ? 'text' : 'password';
+          btn.setAttribute('aria-pressed', isHidden ? 'true' : 'false');
+          btn.textContent = isHidden ? 'Hide' : 'Show';
+          btn.setAttribute('aria-label', isHidden ? 'Hide password' : 'Show password');
+        });
+      }
+      setupPasswordToggle('registerTogglePassword', 'password');
+    })();
+
+    // Utility: create a floating flash popup similar to server-side popup
+    function showFlashPopup(messages, type = 'danger') {
+      if (!Array.isArray(messages)) messages = [messages];
+      let container = document.getElementById('flashPopup');
+      if (!container) {
+        container = document.createElement('div');
+        container.id = 'flashPopup';
+        container.className = 'position-fixed top-0 end-0 p-3';
+        container.style.zIndex = 1080;
+        document.body.appendChild(container);
+      }
+      messages.forEach(m => {
+        const alert = document.createElement('div');
+        alert.className = `alert alert-${type} alert-dismissible fade show mb-2`;
+        alert.setAttribute('role', 'alert');
+        alert.innerHTML = `${m} <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>`;
+        container.appendChild(alert);
+      });
+      // Auto-hide after 4s
+      setTimeout(() => {
+        if (!container) return;
+        container.querySelectorAll('.alert').forEach(a => {
+          try { a.remove(); } catch (e) {}
+        });
+      }, 4000);
+    }
+
+    // If server rendered a flashPopup, auto-hide it after a delay
+    (function () {
+      const p = document.getElementById('flashPopup');
+      if (!p) return;
+      setTimeout(() => {
+        p.querySelectorAll('.alert').forEach(a => { try { a.remove(); } catch (e) {} });
+      }, 4000);
     })();
   </script>
 </body>

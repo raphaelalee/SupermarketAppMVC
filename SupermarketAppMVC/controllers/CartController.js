@@ -102,6 +102,20 @@ exports.addToCart = (req, res) => {
   const userId = req.session?.user?.id; // optional logged-in user id
   const cart = ensureSessionCart(req); // ensure session cart exists
 
+  // Debug: detailed request/session trace for diagnosing add-to-cart issues
+  try {
+    console.debug("[addToCart] incoming request", {
+      method: req.method,
+      url: req.originalUrl,
+      params: req.params,
+      body: req.body,
+      sessionUser: req.session && req.session.user ? { id: req.session.user.id, role: req.session.user.role } : null,
+      sessionCartKeys: Object.keys(req.session.cart || {}),
+    });
+  } catch (logErr) {
+    // keep silent on logging failures
+  }
+
   // Local helper to update the in-memory session cart and redirect.
   const applySessionUpdate = () => {
     const current = cart[productId]; // existing entry or undefined
@@ -119,26 +133,31 @@ exports.addToCart = (req, res) => {
   // Before updating cart (session or DB), check product availability from DB.
   const numericProductId = parseProductId(productId);
   if (!numericProductId) {
-    req.flash("error", "Invalid product.");
+    console.error(`Attempted to add item with invalid ID: ${productId}`); // LOG ERROR
+    req.flash("error", "Invalid product ID format."); // More specific error
     return res.redirect("/shopping");
   }
 
   Product.getById(numericProductId, (err, results) => {
+    console.debug(`[addToCart] Product.getById callback for id=${numericProductId}`, { err: err ? String(err) : null, resultsLength: results && results.length });
     if (err) {
-      console.error(`Failed to load product ${numericProductId}:`, err);
-      req.flash("error", "Unable to add item to cart.");
+      console.error(`DB Error during Product lookup for ID ${numericProductId}:`, err); // LOG DB ERROR
+      req.flash("error", "Database connection error. Try again.");
       return res.redirect("/shopping");
     }
 
     const product = results && results[0];
+    console.debug(`[addToCart] looked up product:`, product ? { id: product.id, productName: product.productName, quantity: product.quantity } : null);
     if (!product) {
+      console.warn(`Product ID ${numericProductId} not found in database.`); // LOG WARNING
       req.flash("error", "Product not found.");
       return res.redirect("/shopping");
     }
 
     const available = Number(product.quantity || 0);
+    console.debug(`[addToCart] available quantity for id=${numericProductId}:`, available);
     if (available <= 0) {
-      req.flash("error", "Item is out of stock.");
+      req.flash("error", "Item is out of stock."); // Check your inventory via /inventory
       return res.redirect("/shopping");
     }
 
@@ -150,7 +169,7 @@ exports.addToCart = (req, res) => {
     // Logged-in: persist the addition then update session
     UserCart.addItem(userId, numericProductId, (addErr) => {
       if (addErr) {
-        console.error(`Failed to add product ${numericProductId} to cart:`, addErr);
+        console.error(`Failed to add product ${numericProductId} to persistent cart:`, addErr); // LOG DB ERROR
         req.flash("error", "Failed to add item to cart. Please try again.");
         return res.redirect("/shopping");
       }

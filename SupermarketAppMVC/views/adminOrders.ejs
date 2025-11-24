@@ -5,11 +5,11 @@
 <% const lowStockList = (dashboard && dashboard.lowStock) || []; %>
 <% const recentOrders = (dashboard && dashboard.recentOrders) || []; %>
 <% const salesChart = (dashboard && dashboard.dailySales) || { labels: [], revenue: [], orders: [] }; %>
-<% const meta = (dashboard && dashboard.meta) || {}; %> // Meta variables hold threshold/limit settings
+<% const meta = (dashboard && dashboard.meta) || {}; %>  
 <% const analytics = (dashboard && dashboard.analytics) || {}; %>
 <% const bestSellers = analytics.bestSellers || []; %>
 <% const categorySales = analytics.salesByCategory || []; %>
-<% const hourlySales = analytics.salesByHour || { labels: [], revenue: [], orders: [] }; %>
+<% const hourlySales = analytics.dailySales || { labels: [], revenue: [], orders: [] }; %>
 <% const returningCustomers = analytics.returningCustomers || []; %>
 <% // Calculates the highest revenue value to normalize the width of the category progress bars %>
 <% const topCategoryRevenue = categorySales.length ? Number(categorySales[0].revenue || 1) : 1; %>
@@ -20,21 +20,10 @@
       <p class="text-muted small mb-1 text-uppercase">Admin overview</p>
       <h1 class="h3 mb-0 fw-semibold">Orders & Fulfillment</h1>
     </div>
-    // Displays the current time to show when the dashboard data was last generated
+    
     <span class="text-muted small">Updated <%= new Date().toLocaleString('en-SG', { hour12: false }) %></span>
   </div>
 
-  <% // --- Display Flash Messages and Errors (Passed from AdminController) --- %>
-  <% if ((errors && errors.length) || (messages && messages.length)) { %>
-    <div class="mb-3">
-      <% (errors || []).forEach(msg => { %>
-        <div class="alert alert-danger py-2 mb-2"><%= msg %></div>
-      <% }) %>
-      <% (messages || []).forEach(msg => { %>
-        <div class="alert alert-success py-2 mb-2"><%= msg %></div>
-      <% }) %>
-    </div>
-  <% } %>
 
   <% // --- Top Row: Key Metrics Totals --- %>
   <div class="row g-3 mb-4">
@@ -79,7 +68,7 @@
             </div>
           </div>
           <div class="chart-wrapper" style="min-height:280px;">
-            // Canvas element where the daily sales chart is drawn (using Chart.js)
+          
             <canvas id="dailySalesChart" height="220"></canvas>
           </div>
         </div>
@@ -98,7 +87,7 @@
           <% if (!lowStockList.length) { %>
             <p class="text-muted small mb-0">No low stock alerts.</p>
           <% } else { %>
-            // List of products with critically low stock (warning/alert)
+         
             <ul class="list-group list-group-flush">
               <% lowStockList.forEach(item => { %>
                 <li class="list-group-item px-0 d-flex justify-content-between align-items-center">
@@ -129,7 +118,6 @@
       <% if (!recentOrders.length) { %>
         <p class="text-muted small mb-0">No orders yet.</p>
       <% } else { %>
-        // Simple list showing details for the most recent orders
         <ul class="list-group list-group-flush">
           <% recentOrders.forEach(order => { %>
             <li class="list-group-item px-0">
@@ -170,7 +158,7 @@
                   <div
                     class="progress-bar bg-success"
                     role="progressbar"
-                    // Calculates the width as a percentage of the highest-earning category
+                    
                     style="width:<%= Math.min(100, topCategoryRevenue ? (cat.revenue / topCategoryRevenue) * 100 : 0) %>%"
                   ></div>
                 </div>
@@ -218,7 +206,7 @@
             </div>
           </div>
           <div class="chart-wrapper" style="min-height:260px;">
-            // Canvas element where the hourly sales chart is drawn (using Chart.js)
+            
             <canvas id="hourlySalesChart" height="200"></canvas>
           </div>
         </div>
@@ -231,7 +219,6 @@
           <% if (!returningCustomers.length) { %>
             <p class="text-muted small mb-0">No repeat buyers yet.</p>
           <% } else { %>
-            // List showing customers with more than one order
             <ul class="list-group list-group-flush">
               <% returningCustomers.forEach(customer => { %>
                 <li class="list-group-item px-0 d-flex justify-content-between align-items-center">
@@ -283,13 +270,11 @@
               <td>S$ <%= Number(o.total || 0).toFixed(2) %></td>
               <td class="text-capitalize"><%= o.paymentMethod %></td>
               <td>
-                // Conditional badge coloring based on order status
                 <span class="badge text-uppercase <%= o.status === 'completed' ? 'bg-success-subtle text-success' : (o.status === 'processing' ? 'bg-info-subtle text-info' : 'bg-secondary-subtle text-secondary') %>">
                   <%= o.status.charAt(0).toUpperCase() + o.status.slice(1) %>
                 </span>
               </td>
               <td>
-                <% // Conditional badge coloring for payment status %>
                 <% if (o.paid) { %>
                   <span class="badge text-bg-success-subtle text-success fw-semibold">Yes</span>
                 <% } else { %>
@@ -299,9 +284,7 @@
               <td><%= o.displayDate || "-" %></td>
               <td>
                 <div class="d-flex flex-wrap gap-2">
-                  // Link to the detailed order view
                   <a class="btn btn-sm btn-outline-secondary" href="/admin/orders/<%= o.id %>">View</a>
-                  // Link to download the PDF receipt
                   <a class="btn btn-sm btn-outline-primary" href="/admin/orders/<%= o.id %>/receipt" target="_blank">PDF</a>
                 </div>
               </td>
@@ -313,7 +296,7 @@
   </div>
 </section>
 
-// --- Client-side JavaScript for Drawing Charts (Chart.js library is loaded via CDN) ---
+
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 <script>
 (function () {
@@ -478,4 +461,4 @@
 })();
 </script>
 
-<%- include('partials/footer') %> // Includes the footer partial
+<%- include('partials/footer') %>

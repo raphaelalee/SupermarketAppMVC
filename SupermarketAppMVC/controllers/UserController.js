@@ -99,6 +99,27 @@ exports.registerUser = (req, res) => {
     return res.redirect("/register");
   }
 
+  // Password policy: require a minimum length (friendly validation)
+  if (typeof password !== 'string' || password.length < 6) {
+    req.flash('error', 'Password must be at least 6 characters long.');
+    return res.redirect('/register');
+  }
+
+  // Password must include at least one special character for stronger security
+  const specialCharPattern = /[!@#$%^&*(),.?":{}|<>]/;
+  if (!specialCharPattern.test(password)) {
+    req.flash('error', 'Password must include at least one special character (e.g. !@#$%).');
+    return res.redirect('/register');
+  }
+
+  // Require at least one uppercase letter and one digit for stronger passwords
+  const uppercasePattern = /[A-Z]/;
+  const digitPattern = /\d/;
+  if (!uppercasePattern.test(password) || !digitPattern.test(password)) {
+    req.flash('error', 'Password must include at least one uppercase letter and one digit.');
+    return res.redirect('/register');
+  }
+
   // Check if email is already taken
   Users.getByEmail(email, (err, results) => {
     if (err) { console.error("DB error:", err); req.flash("error", "Database error."); return res.redirect("/register"); }
@@ -134,7 +155,7 @@ exports.loginUser = (req, res) => {
   if (!/@gmail/i.test(email)) { req.flash("error", "Please use your Gmail address to login."); return res.redirect("/login"); }
 
   Users.getByEmail(email, (err, results) => {
-    if (err || !results || results.length === 0) { req.flash("error", "User not found."); return res.redirect("/login"); }
+    if (err || !results || results.length === 0) { req.flash("error", "Email not found."); return res.redirect("/login"); }
     const user = results[0];
     const match = bcrypt.compareSync(password, user.password);
     if (!match) { req.flash("error", "Incorrect password."); return res.redirect("/login"); }

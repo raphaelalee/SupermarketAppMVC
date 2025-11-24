@@ -29,11 +29,9 @@ function addItem(userId, productId, callback) {
   }
 
   const sql = `
-    // This is the core logic: Tries to INSERT a quantity of 1.
     INSERT INTO user_carts (userId, productId, quantity)
     VALUES (?, ?, 1)
-    // If the item is already in the cart (duplicate key), INCREMENT the quantity by 1.
-    ON DUPLICATE KEY UPDATE quantity = quantity + 1 
+    ON DUPLICATE KEY UPDATE quantity = quantity + 1
   `;
 
   // Runs the safe, concurrency-friendly SQL query
@@ -71,11 +69,9 @@ function setQuantity(userId, productId, quantity, callback) {
   }
 
   const sql = `
-    // Tries to INSERT the specific quantity.
     INSERT INTO user_carts (userId, productId, quantity)
     VALUES (?, ?, ?)
-    // If the item exists, it OVERWRITES the existing quantity with the new value.
-    ON DUPLICATE KEY UPDATE quantity = VALUES(quantity) 
+    ON DUPLICATE KEY UPDATE quantity = VALUES(quantity)
   `;
 
   db.query(sql, [userId, pid, qty], cb);

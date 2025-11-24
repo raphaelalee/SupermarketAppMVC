@@ -1,4 +1,4 @@
-﻿<%- include('partials/header') %> // Include the standard site header
+﻿<%- include('partials/header') %> 
 
 <section class="checkout-shell" style="background:#f4f6f7;">
   <div class="container py-5">
@@ -10,9 +10,7 @@
 
     <div class="row g-4">
       <div class="col-lg-7">
-        // Main form that submits the order data to the server (CheckoutController.processCheckout)
         <form method="POST" action="/checkout" id="checkout-form" class="card border-0 shadow-sm p-4" novalidate>
-          // Hidden fields to pass selected delivery method and fee to the server
           <input type="hidden" name="deliveryMethod" id="deliveryMethod" value="standard">
           <input type="hidden" name="deliveryFee" id="deliveryFee" value="3.50">
 
@@ -22,8 +20,9 @@
               <span class="badge bg-success-subtle text-success">Step 1 of 2</span>
             </div>
             <p class="text-muted small mb-3">Choose the option that works best for your schedule.</p>
-            <div class="row g-3">
-              // Delivery Option 1: Standard
+            
+            
+            <div class="row g-3"> 
               <div class="col-12">
                 <label class="checkout-option d-flex align-items-center">
                   <input type="radio" name="delivery" value="standard" data-fee="3.50" checked>
@@ -34,7 +33,7 @@
                   <span class="price-tag">$3.50</span>
                 </label>
               </div>
-              // Delivery Option 2: Express
+
               <div class="col-12">
                 <label class="checkout-option d-flex align-items-center">
                   <input type="radio" name="delivery" value="express" data-fee="6.00">
@@ -45,7 +44,7 @@
                   <span class="price-tag">$6.00</span>
                 </label>
               </div>
-              // Delivery Option 3: Pickup (Free)
+
               <div class="col-12">
                 <label class="checkout-option d-flex align-items-center">
                   <input type="radio" name="delivery" value="pickup" data-fee="0">
@@ -56,31 +55,34 @@
                   <span class="price-tag">$0.00</span>
                 </label>
               </div>
-            </div>
+            </div> 
 
             <div class="aml-note">
               <div class="shield">✓</div>
               <div>
                 <strong class="d-block">Secure & AML checks</strong>
-                <small class="text-muted">We perform AML and identity verification for high-value orders. Payments are encrypted and PCI-DSS compliant.</small>
+                <small class="text-muted">We perform AML and identity verification for high-value orders. Payments are
+                  encrypted and PCI-DSS compliant.</small>
               </div>
             </div>
 
-            // Section for mandatory shipping fields
-            <div class="row g-3 mt-2" id="delivery-fields">
+
+            
+            <div class="row g-3 mt-2" id="delivery-fields"> 
               <div class="col-12">
                 <label class="form-label small text-muted">Recipient name</label>
                 <input type="text" class="form-control" name="shippingName" placeholder="Full name for delivery" required>
               </div>
               <div class="col-12">
                 <label class="form-label small text-muted">Contact number</label>
-                // Basic HTML pattern validation for phone number
-                <input type="tel" class="form-control" name="shippingPhone" placeholder="+65 8123 4567" pattern="\+?\d{8,15}" required>
+                <input type="tel" class="form-control" name="shippingPhone" id="shippingPhone" placeholder="+65 81234567"
+                  pattern="^(\+65\s?)?\d{8}$" required>
+                <div class="invalid-feedback">Enter an 8-digit Singapore number (optionally prefixed with +65).</div>
               </div>
               <div class="col-12">
                 <label class="form-label small text-muted">Delivery address</label>
-                <textarea class="form-control" name="shippingAddress" rows="3" placeholder="Block / Unit / Postal code" required></textarea>
-                // Feedback element used by custom validation JS below
+                <textarea class="form-control" name="shippingAddress" rows="3" placeholder="Block / Unit / Postal code"
+                  required></textarea>
                 <div class="invalid-feedback" id="addr-feedback">Please put unit number and full address</div>
               </div>
             </div>
@@ -92,9 +94,10 @@
               <span class="badge bg-success-subtle text-success">Step 2 of 2</span>
             </div>
             <p class="text-muted small mb-3">Pick how you’d like to pay.</p>
+            
+           
             <div class="row g-3">
               <div class="col-12">
-                // Payment Option 1: PayNow (default)
                 <label class="checkout-option align-items-start">
                   <input type="radio" name="payment" value="paynow" checked>
                   <div class="checkout-option-body">
@@ -106,7 +109,7 @@
                   </div>
                 </label>
               </div>
-              // Other options (Apple Pay, Google Pay, Card) are mostly UI placeholders
+
               <div class="col-12">
                 <label class="checkout-option d-flex align-items-center">
                   <input type="radio" name="payment" value="applepay">
@@ -114,7 +117,8 @@
                     <div class="payment-logo" aria-hidden="true" style="width:44px;">
                       <svg width="44" height="28" viewBox="0 0 44 28" fill="none" xmlns="http://www.w3.org/2000/svg">
                         <rect rx="6" width="44" height="28" fill="#111" />
-                        <text x="22" y="19" font-size="12" text-anchor="middle" fill="#fff" font-family="Arial,Helvetica,sans-serif">Apple</text>
+                        <text x="22" y="19" font-size="12" text-anchor="middle" fill="#fff"
+                          font-family="Arial,Helvetica,sans-serif">Apple</text>
                       </svg>
                     </div>
                     <div>
@@ -132,7 +136,8 @@
                     <div class="payment-logo" aria-hidden="true" style="width:44px;">
                       <svg width="60" height="28" viewBox="0 0 60 28" fill="none" xmlns="http://www.w3.org/2000/svg">
                         <rect rx="6" width="60" height="28" fill="#fff" stroke="#e6e6e6" />
-                        <text x="30" y="19" font-size="12" text-anchor="middle" fill="#202124" font-family="Arial,Helvetica,sans-serif">G Pay</text>
+                        <text x="30" y="19" font-size="12" text-anchor="middle" fill="#202124"
+                          font-family="Arial,Helvetica,sans-serif">G Pay</text>
                       </svg>
                     </div>
                     <div>
@@ -142,9 +147,8 @@
                   </div>
                 </label>
               </div>
-              
+
               <div class="col-12">
-                // Payment Option 4: Card (activates conditional input fields)
                 <label class="checkout-option align-items-start">
                   <input type="radio" name="payment" value="card">
                   <div class="checkout-option-body">
@@ -155,7 +159,8 @@
               </div>
             </div>
 
-            // Conditional block for card payment details
+
+           
             <div class="card-fields mt-3" id="card-fields">
               <div class="row g-3">
                 <div class="col-12">
@@ -164,63 +169,69 @@
                 </div>
                 <div class="col-12">
                   <label class="form-label small text-muted">Card number</label>
-                  // Input validation via HTML pattern and maxlength
-                  <input type="text" class="form-control" name="cardNumber" placeholder="1111 2222 3333 4444" maxlength="19" pattern="\d{13,19}" required>
+                  <input type="text" class="form-control" name="cardNumber" placeholder="1111 2222 3333 4444" maxlength="19"
+                    pattern="\d{13,19}" required>
                 </div>
                 <div class="col-6">
                   <label class="form-label small text-muted">Expiry</label>
-                  <input type="text" class="form-control" name="cardExpiry" placeholder="MM/YY" maxlength="5" pattern="(0[1-9]|1[0-2])\/\d{2}" required>
+                  <input type="text" class="form-control" name="cardExpiry" placeholder="MM/YY" maxlength="5"
+                    pattern="(0[1-9]|1[0-2])\/\d{2}" required>
                 </div>
                 <div class="col-6">
                   <label class="form-label small text-muted">CVV</label>
-                  <input type="text" class="form-control" name="cardCvv" placeholder="123" maxlength="4" pattern="\d{3,4}" required>
+                  <input type="text" class="form-control" name="cardCvv" placeholder="123" maxlength="4" pattern="\d{3,4}"
+                    required>
                 </div>
               </div>
             </div>
           </section>
 
           <button type="submit" class="btn btn-success w-100 py-3 fw-semibold">Complete Payment</button>
-          <p class="text-muted small text-center mt-3 mb-0">Transactions are encrypted. Need help? <a href="/contact">Contact us</a>.</p>
+          <p class="text-muted small text-center mt-3 mb-0">Transactions are encrypted. Need help? <a href="/contact">Contact
+              us</a>.</p>
         </form>
       </div>
-
       <div class="col-lg-5">
-        // Aside: Order Summary Card
         <aside class="card border-0 shadow-sm p-4 mb-4">
           <h5 class="mb-3 fw-semibold">Order summary</h5>
           <div class="border rounded-3 mb-3">
             <table class="table mb-0 align-middle">
               <tbody>
                 <% // Loops through items (passed as 'items' from the server) %>
-                <% if ((items || []).length === 0) { %>
+                <% if ((items || []).length===0) { %>
                   <tr>
                     <td class="text-muted small" colspan="3">Your basket is empty.</td>
                   </tr>
-                <% } else { %>
-                  <% (items || []).forEach(it => { %>
-                    <tr>
-                      <td style="width:56px;">
-                        <img src="/images/<%= it.image || 'broccoli.png' %>" alt="<%= it.productName %>" class="img-fluid rounded" style="max-width:48px;">
-                      </td>
-                      <td>
-                        <p class="mb-0 fw-semibold"><%= it.productName %></p>
-                        <p class="text-muted small mb-0">Qty <%= it.quantity %> • $<%= Number(it.price).toFixed(2) %></p>
-                      </td>
-                      <td class="text-end fw-semibold">$<%= Number(it.subtotal || 0).toFixed(2) %></td>
-                    </tr>
-                  <% }) %>
-                <% } %>
+                  <% } else { %>
+                    <% (items || []).forEach(it=> { %>
+                      <tr>
+                        <td style="width:56px;">
+                          <img src="/images/<%= it.image || 'broccoli.png' %>" alt="<%= it.productName %>"
+                            class="img-fluid rounded" style="max-width:48px;">
+                        </td>
+                        <td>
+                          <p class="mb-0 fw-semibold">
+                            <%= it.productName %>
+                          </p>
+                          <p class="text-muted small mb-0">Qty <%= it.quantity %> • $<%= Number(it.price).toFixed(2) %>
+                          </p>
+                        </td>
+                        <td class="text-end fw-semibold">$<%= Number(it.subtotal || 0).toFixed(2) %>
+                        </td>
+                      </tr>
+                      <% }) %>
+                    <% } %>
               </tbody>
             </table>
           </div>
           <div class="summary-row">
             <span>Subtotal</span>
-            // Displays the product subtotal (calculated in the backend or middleware)
+
             <strong id="summary-subtotal">S$ <%= total.toFixed(2) %></strong>
           </div>
           <div class="summary-row">
             <span>Delivery</span>
-            // This fee is updated dynamically by the JavaScript below
+
             <strong id="summary-delivery">S$ 3.50*</strong>
           </div>
           <div class="summary-row">
@@ -230,7 +241,7 @@
           <p class="text-muted small mb-3">*Exact amount updates when you change the delivery option.</p>
           <div class="summary-row total-row">
             <span>Amount due</span>
-            // This is the final calculated total (subtotal + delivery fee)
+
             <strong id="summary-total">S$ <%= (total + 3.5).toFixed(2) %></strong>
           </div>
         </aside>
@@ -251,7 +262,7 @@
 <%- include('partials/footer') %>
 
 <script>
-  (function() {
+  (function () {
     // --- Get DOM Elements and Server-Side Subtotal ---
     const deliveryRadios = document.querySelectorAll('input[name="delivery"]');
     const deliveryMethodInput = document.getElementById('deliveryMethod');
@@ -277,11 +288,11 @@
     function updateDelivery() {
       const selected = Array.from(deliveryRadios).find(r => r.checked);
       const fee = selected ? Number(selected.dataset.fee || 0) : 0;
-      
+
       // Update hidden form fields for submission
       deliveryMethodInput.value = selected ? selected.value : 'standard';
       deliveryFeeInput.value = fee.toFixed(2);
-      
+
       // Update display in the Order Summary aside
       summaryDelivery.textContent = formatMoney(fee) + '*';
       summaryTotal.textContent = formatMoney(Number(subtotal) + fee);
@@ -293,7 +304,7 @@
         deliveryFields.style.flexDirection = 'column';
         // Toggles the 'required' and 'disabled' attributes on all input fields
         deliveryInputs.forEach((input) => {
-          input.required = !isPickup; 
+          input.required = !isPickup;
           input.disabled = isPickup;
         });
       }
@@ -304,7 +315,7 @@
       const selected = Array.from(paymentRadios).find(r => r.checked);
       const payment = selected ? selected.value : '';
       const showCard = payment === 'card'; // Only show fields if 'Card' is selected
-      
+
       cardFields.style.display = showCard ? 'block' : 'none';
       // Toggles the 'required' and 'disabled' attributes on card fields for validation
       cardInputs.forEach((input) => {
@@ -338,6 +349,21 @@
           const fb = document.getElementById('addr-feedback');
           if (fb) fb.textContent = msg;
           shippingAddressEl.classList.add('is-invalid');
+        }
+      }
+
+      // Validate shipping phone format (require 8 digits or +65 + 8 digits)
+      if (!isPickup && shippingPhoneEl) {
+        const v = (shippingPhoneEl.value || '').trim();
+        const pattern = /^(\+65\s?)?\d{8}$/;
+        if (!pattern.test(v)) {
+          event.preventDefault();
+          event.stopPropagation();
+          shippingPhoneEl.classList.add('is-invalid');
+          const fb = shippingPhoneEl.parentElement.querySelector('.invalid-feedback');
+          if (fb) fb.textContent = 'Contact number must be 8 digits (optionally prefixed with +65).';
+          shippingPhoneEl.focus();
+          return;
         }
       }
 

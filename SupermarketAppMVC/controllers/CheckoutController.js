@@ -27,6 +27,17 @@ exports.processCheckout = (req, res) => {
 
   const deliveryMethod = req.body.deliveryMethod || "standard";
   const deliveryFee = parseFloat(req.body.deliveryFee || 0);
+  // Normalize and validate shipping phone for non-pickup deliveries
+  const rawPhone = (req.body.shippingPhone || "").toString();
+  const digitsOnly = rawPhone.replace(/\D/g, ''); // strip non-digits
+  // Accept formats like '81234567' or '+6581234567' but ensure 8 final digits
+  if (deliveryMethod !== 'pickup') {
+    const last8 = digitsOnly.slice(-8);
+    if (!/^\d{8}$/.test(last8)) {
+      req.flash('error', 'Contact number must be exactly 8 digits.');
+      return res.redirect('/checkout');
+    }
+  }
   const paymentMethod = req.body.payment || "paynow";
   const subtotal = items.reduce((sum, i) => sum + (i.subtotal || 0), 0);
   const total = subtotal + deliveryFee;
@@ -40,6 +51,7 @@ exports.processCheckout = (req, res) => {
     total,
     deliveryMethod,
     paymentMethod,
+    shippingPhone: digitsOnly ? digitsOnly.slice(-8) : null,
     paid: true, // We treat completed checkout as paid
     createdAt: new Date().toISOString(),
     items,

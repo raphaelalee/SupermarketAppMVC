@@ -97,14 +97,14 @@ function listAllWithUsers(callback) {
       o.paid,
       o.status,
       o.createdAt,
-      u.username AS customerName, // Alias user's name as customerName
-      COUNT(oi.id) AS itemsCount // Aggregate function to count items per order
+      u.username AS customerName,
+      COUNT(oi.id) AS itemsCount
     FROM orders o
-    LEFT JOIN users u ON u.id = o.userId // Link to user, allowing for 'Guest checkout' (null user)
-    LEFT JOIN order_items oi ON oi.orderId = o.id // Link to get item details
+    LEFT JOIN users u ON u.id = o.userId
+    LEFT JOIN order_items oi ON oi.orderId = o.id
     GROUP BY 
       o.id, o.orderNumber, o.total, o.paymentMethod, o.paid, o.status, o.createdAt, u.username
-    ORDER BY o.createdAt DESC, o.id DESC // Sort newest first
+    ORDER BY o.createdAt DESC, o.id DESC
   `;
 
   db.query(sql, (err, rows) => {
@@ -195,11 +195,11 @@ function getBestSellingProducts(limit = 5, callback) {
     SELECT 
       COALESCE(oi.productId, 0) AS productId,
       oi.name AS productName,
-      SUM(oi.quantity) AS totalQuantity, // Aggregate: sum up quantities
-      SUM(oi.subtotal) AS totalRevenue // Aggregate: sum up revenue
+      SUM(oi.quantity) AS totalQuantity,
+      SUM(oi.subtotal) AS totalRevenue
     FROM order_items oi
-    GROUP BY COALESCE(oi.productId, oi.name) // Group results to roll up per product
-    ORDER BY totalQuantity DESC, totalRevenue DESC // Prioritize quantity, then revenue
+    GROUP BY COALESCE(oi.productId, oi.name)
+    ORDER BY totalQuantity DESC, totalRevenue DESC
     LIMIT ?
   `;
 
@@ -213,11 +213,11 @@ function getBestSellingProducts(limit = 5, callback) {
 function getSalesByCategory(callback) {
   const sql = `
     SELECT
-      COALESCE(p.category, 'Uncategorized') AS category, // Fallback for items without a product link
+      COALESCE(p.category, 'Uncategorized') AS category,
       SUM(oi.subtotal) AS revenue,
       SUM(oi.quantity) AS quantity
     FROM order_items oi
-    LEFT JOIN products p ON p.id = oi.productId // Join with products to get category data
+    LEFT JOIN products p ON p.id = oi.productId
     GROUP BY COALESCE(p.category, 'Uncategorized')
     ORDER BY revenue DESC
   `;
@@ -235,11 +235,11 @@ function getSalesByHourRange(hours = 24, callback) {
 
   const sql = `
     SELECT 
-      DATE_FORMAT(o.createdAt, '%Y-%m-%d %H:00:00') AS bucket, // Aggregate into hour-long buckets
+      DATE_FORMAT(o.createdAt, '%Y-%m-%d %H:00:00') AS bucket,
       COUNT(*) AS ordersCount,
       COALESCE(SUM(o.total), 0) AS revenue
     FROM orders o
-    WHERE o.createdAt >= DATE_SUB(NOW(), INTERVAL ? HOUR) // Filter: only include orders within the time window
+    WHERE o.createdAt >= DATE_SUB(NOW(), INTERVAL ? HOUR)
     GROUP BY bucket
     ORDER BY bucket ASC
   `;
@@ -259,13 +259,13 @@ function getReturningCustomers(limit = 5, callback) {
     SELECT 
       u.id,
       u.username,
-      COUNT(o.id) AS ordersCount, // Aggregate: count total orders
-      COALESCE(SUM(o.total), 0) AS totalSpent // Aggregate: sum total spent
+      COUNT(o.id) AS ordersCount,
+      COALESCE(SUM(o.total), 0) AS totalSpent
     FROM orders o
-    INNER JOIN users u ON u.id = o.userId // Only include orders linked to a registered user
+    INNER JOIN users u ON u.id = o.userId
     GROUP BY u.id, u.username
-    HAVING COUNT(o.id) > 1 // Filter: keep only customers with more than 1 order
-    ORDER BY ordersCount DESC, totalSpent DESC // Sort by number of orders, then total spent
+    HAVING COUNT(o.id) > 1
+    ORDER BY ordersCount DESC, totalSpent DESC
     LIMIT ?
   `;
 

@@ -17,7 +17,12 @@
       </div>
 
       <div class="col-lg-6 text-center mt-4 mt-lg-0">
-        <img src="/images/broccoli2.jpg" alt="Fresh groceries" class="img-fluid rounded-4 shadow-sm" style="max-height:360px;">
+        <!-- Responsive hero image: smaller image for mobile, full image for larger screens -->
+        <picture>
+          <source media="(max-width: 767px)" srcset="/images/broccoli.png">
+          <source media="(min-width: 768px)" srcset="/images/supermarket.jpg">
+          <img src="/images/supermarket.jpg" alt="Fresh groceries" class="img-fluid rounded-4 shadow-sm" style="max-height:360px; object-fit:cover;">
+        </picture>
       </div>
     </div>
   </div>

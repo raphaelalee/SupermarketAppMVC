@@ -23,10 +23,28 @@
 
           <% 
             const serverMsgs = messages || [];
+            const serverSuccess = (typeof success !== 'undefined' && success) ? (Array.isArray(success) ? success : [success]) : [];
             const emailMsgs = serverMsgs.filter(m => /email/i.test(m));
             const passwordMsgs = serverMsgs.filter(m => /password/i.test(m));
             const otherMsgs = serverMsgs.filter(m => !/email|password/i.test(m));
           %>
+
+          <% if ((serverMsgs && serverMsgs.length) || (serverSuccess && serverSuccess.length)) { %>
+            <div id="flashPopup" class="position-fixed top-0 end-0 p-3" style="z-index:1080;">
+              <% serverMsgs.forEach(m => { %>
+                <div class="alert alert-danger alert-dismissible fade show mb-2" role="alert">
+                  <%= m %>
+                  <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                </div>
+              <% }) %>
+              <% serverSuccess.forEach(m => { %>
+                <div class="alert alert-success alert-dismissible fade show mb-2" role="alert">
+                  <%= m %>
+                  <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                </div>
+              <% }) %>
+            </div>
+          <% } %>
 
           <% if (otherMsgs.length) { %>
             <% otherMsgs.forEach(m => { %>
@@ -48,7 +66,10 @@
             </div>
             <div class="mb-3">
               <label class="form-label">Password</label>
-              <input type="password" name="password" id="loginPassword" class="form-control" required>
+              <div class="input-group">
+                <input type="password" name="password" id="loginPassword" class="form-control" required aria-describedby="loginTogglePassword">
+                <button class="btn btn-outline-secondary" type="button" id="loginTogglePassword" aria-pressed="false" aria-label="Show password">Show</button>
+              </div>
               <% if (passwordMsgs.length) { %>
                 <% passwordMsgs.forEach(m => { %>
                   <div class="invalid-feedback d-block"><%= m %></div>
@@ -105,6 +126,35 @@
       }
     });
   })();
+    // Setup password visibility toggle(s)
+    (function () {
+      function setupPasswordToggle(toggleId, inputId) {
+        const btn = document.getElementById(toggleId);
+        const input = document.getElementById(inputId);
+        if (!btn || !input) return;
+        btn.addEventListener('click', function () {
+          const isHidden = input.type === 'password';
+          input.type = isHidden ? 'text' : 'password';
+          btn.setAttribute('aria-pressed', isHidden ? 'true' : 'false');
+          btn.textContent = isHidden ? 'Hide' : 'Show';
+          btn.setAttribute('aria-label', isHidden ? 'Hide password' : 'Show password');
+        });
+      }
+      setupPasswordToggle('loginTogglePassword', 'loginPassword');
+    })();
+
+    // Auto-hide any flash popup alerts after 4 seconds
+    (function () {
+      const p = document.getElementById('flashPopup');
+      if (!p) return;
+      setTimeout(() => {
+        p.querySelectorAll('.alert').forEach(a => {
+          a.classList.remove('show');
+          a.classList.add('fade');
+          try { a.remove(); } catch (e) {}
+        });
+      }, 4000);
+    })();
 </script>
 
 <%- include('partials/footer') %>

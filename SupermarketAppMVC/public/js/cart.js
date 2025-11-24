@@ -117,6 +117,22 @@ document.addEventListener('DOMContentLoaded', () => {
         body: JSON.stringify({ quantity: qty }),
       })
         .then((r) => r.json())
+      // Debug helper: log when add-to-cart forms are submitted (helps detect client-side blocking)
+      try {
+        document.querySelectorAll('form[action^="/add-to-cart"]').forEach((frm) => {
+          frm.addEventListener('submit', (ev) => {
+            try {
+              // Log form action + entries (FormData can't be directly logged as object in all browsers)
+              const fd = new FormData(frm);
+              const entries = {};
+              for (const pair of fd.entries()) entries[pair[0]] = pair[1];
+              console.debug('[client-debug] add-to-cart form submit', { action: frm.action, method: frm.method || 'GET', entries });
+            } catch (inner) {}
+          });
+        });
+      } catch (e) {
+        // ignore debug install errors
+      }
         .then((json) => {
           if (!json.success) return;
 

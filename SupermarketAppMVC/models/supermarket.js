@@ -69,10 +69,10 @@ module.exports = {
     const safeLimit =
       Number.isFinite(Number(limit)) && Number(limit) > 0 ? Number(limit) : 5;
 
-    const sql = `SELECT id, productName, COALESCE(quantity, 0) AS quantity
+     const sql = `SELECT id, productName, COALESCE(quantity, 0) AS quantity
        FROM products
-       WHERE COALESCE(quantity, 0) <= ? // Check if quantity is less than or equal to threshold
-       ORDER BY COALESCE(quantity, 0) ASC, productName ASC // Order by lowest stock first
+       WHERE COALESCE(quantity, 0) <= ?
+       ORDER BY COALESCE(quantity, 0) ASC, productName ASC
        LIMIT ?`;
 
     db.query(sql, [safeThreshold, safeLimit],
