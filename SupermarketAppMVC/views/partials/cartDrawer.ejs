@@ -4,8 +4,8 @@
 <% const totalValue = typeof cartTotal !== "undefined" ? Number(cartTotal) : items.reduce((sum, it) => sum + (it.subtotal || 0), 0); %>
 <% // Calculates item count, using the pre-calculated cartCount or calculating a fallback count %>
 <% const fallbackCount = items.reduce((sum, it) => sum + (it.quantity || 0), 0); %>
-<% const isLoggedIn = !!user; %> // Checks if a user object exists in the session (logged in)
-<% const hasItems = items.length > 0; %> // Checks if the cart contains any items
+<% const isLoggedIn = !!user; %>
+<% const hasItems = items.length > 0; %>
 
 <aside id="cart-drawer" class="cart-drawer" aria-live="polite">
   <div class="cart-header">
@@ -76,5 +76,4 @@
 
 <div class="cart-overlay" id="cart-overlay"></div>
 
-// Links the necessary JavaScript file for interactive cart actions
 <script src="/js/cart.js" defer></script>

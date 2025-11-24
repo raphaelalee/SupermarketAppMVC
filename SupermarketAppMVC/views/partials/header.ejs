@@ -72,57 +72,6 @@
     </div>
   </nav>
 
-  <!-- Toast container for flash messages (moved inside .main-content for better positioning) -->
-
   <%- include('cartDrawer') %>
 
   <main class="main-content">
-
-    <!-- Toast container for flash messages (positioned within the main white content area) -->
-    <div aria-live="polite" aria-atomic="true" class="position-relative">
-      <div class="toast-container position-absolute top-0 end-0 p-3" id="flashToastContainer" style="z-index:1050;">
-        <% if (messages && messages.length > 0) { %>
-          <% messages.forEach(m => { %>
-            <div class="toast align-items-center text-bg-success border-0 mb-2" role="alert" aria-live="assertive" aria-atomic="true">
-              <div class="d-flex">
-                <div class="toast-body"><%= m %></div>
-                <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
-              </div>
-            </div>
-          <% }) %>
-        <% } %>
-
-        <% if (errors && errors.length > 0) { %>
-          <% errors.forEach(e => { %>
-            <div class="toast align-items-center text-bg-danger border-0 mb-2" role="alert" aria-live="assertive" aria-atomic="true">
-              <div class="d-flex">
-                <div class="toast-body"><%= e %></div>
-                <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
-              </div>
-            </div>
-          <% }) %>
-        <% } %>
-      </div>
-    </div>
-
-  <script>
-    // Initialize and show bootstrap toasts for any flash messages rendered in the header
-    // NOTES (Toasts & Header):
-    // - Toast markup is rendered inside #flashToastContainer. To change position, edit CSS in `public/css/style.css`.
-    // - Toasts require Bootstrap JS (`bootstrap.bundle.min.js`) included in the footer (`views/partials/footer.ejs`).
-    // - To change auto-hide delay, update the `delay` value below (currently 3000 ms).
-    // - When modifying header (nav links), keep the authentication checks (`res.locals.user`) consistent with `app.js` middleware.
-    document.addEventListener('DOMContentLoaded', function () {
-      if (typeof bootstrap === 'undefined') return;
-      var toastEls = [].slice.call(document.querySelectorAll('#flashToastContainer .toast'));
-      toastEls.forEach(function (el) {
-        try {
-          // Autohide toasts after 3 seconds so they don't block products
-          var t = new bootstrap.Toast(el, { delay: 3000 });
-          t.show();
-        } catch (e) {
-          // ignore
-        }
-      });
-    });
-  </script>
