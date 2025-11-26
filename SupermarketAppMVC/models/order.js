@@ -18,7 +18,6 @@ function createOrder(order, items, callback) {
     status = DEFAULT_ORDER_STATUS,
   } = order;
 
-  // Array of values to be substituted into the primary SQL query (automatically escapes them)
   const payload = [
     orderNumber,
     userId,
@@ -30,44 +29,109 @@ function createOrder(order, items, callback) {
     status,
   ];
 
-  // 1. INSERT INTO ORDERS TABLE
-  const sql = `
-    INSERT INTO orders 
-      (orderNumber, userId, subtotal, deliveryFee, total, deliveryMethod, paymentMethod, status)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-  `;
+  // Use a connection from the pool to run a transaction so we can atomically create the order,
+  // insert items and decrement product quantities.
+  db.getConnection((connErr, connection) => {
+    if (connErr) return callback(connErr);
 
-  // Executes the primary order insertion
-  db.query(sql, payload, (err, result) => {
-    if (err) return callback(err); // Handle errors from the orders table insertion
+    connection.beginTransaction((txErr) => {
+      if (txErr) {
+        connection.release();
+        return callback(txErr);
+      }
 
-    const orderId = result.insertId; // Retrieve the newly created order ID
+      const sql = `
+        INSERT INTO orders 
+          (orderNumber, userId, subtotal, deliveryFee, total, deliveryMethod, paymentMethod, status)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+      `;
 
-    if (!items || !items.length) {
-      return callback(null, orderId); // Skip items insertion if cart was empty or validation failed
-    }
+      connection.query(sql, payload, (insErr, result) => {
+        if (insErr) {
+          return connection.rollback(() => {
+            connection.release();
+            callback(insErr);
+          });
+        }
 
-    // Map cart items into an array of arrays format suitable for batch insertion
-    const values = items.map((i) => [
-      orderId,
-      i.id || null, // The product ID (or null if the original product was deleted)
-      i.productName || i.name,
-      i.price || 0,
-      i.quantity || 0,
-      i.subtotal || 0,
-    ]);
+        const orderId = result.insertId;
 
-    // 2. INSERT INTO ORDER_ITEMS TABLE (Batch Insertion for efficiency)
-    const itemsSql = `
-      INSERT INTO order_items 
-        (orderId, productId, name, price, quantity, subtotal)
-      VALUES ?
-    `;
+        if (!items || !items.length) {
+          return connection.commit((cErr) => {
+            if (cErr) {
+              return connection.rollback(() => {
+                connection.release();
+                callback(cErr);
+              });
+            }
+            connection.release();
+            return callback(null, orderId);
+          });
+        }
 
-    // Executes the batch item insertion (the '?' placeholder handles all rows in the [values] array)
-    db.query(itemsSql, [values], (err2) => {
-      if (err2) return callback(err2); // Handle errors from the order_items table insertion
-      callback(null, orderId);
+        const values = items.map((i) => [
+          orderId,
+          i.id || null,
+          i.productName || i.name,
+          i.price || 0,
+          i.quantity || 0,
+          i.subtotal || 0,
+        ]);
+
+        const itemsSql = `
+          INSERT INTO order_items 
+            (orderId, productId, name, price, quantity, subtotal)
+          VALUES ?
+        `;
+
+        connection.query(itemsSql, [values], (itemsErr) => {
+          if (itemsErr) {
+            return connection.rollback(() => {
+              connection.release();
+              callback(itemsErr);
+            });
+          }
+
+          // Decrement product quantities for items that have a valid productId
+          const updates = (items || []).filter((it) => it.id).map((it) => ({ id: it.id, qty: it.quantity || 0 }));
+
+          // Helper to sequentially run updates to avoid overwhelming the DB and to keep within transaction
+          let idx = 0;
+          function runNextUpdate() {
+            if (idx >= updates.length) {
+              // All updates done — commit the transaction
+              return connection.commit((commitErr) => {
+                if (commitErr) {
+                  return connection.rollback(() => {
+                    connection.release();
+                    callback(commitErr);
+                  });
+                }
+                connection.release();
+                return callback(null, orderId);
+              });
+            }
+
+            const u = updates[idx++];
+            // Ensure quantity never goes below zero using GREATEST
+            connection.query(
+              'UPDATE products SET quantity = GREATEST(quantity - ?, 0) WHERE id = ?',
+              [u.qty, u.id],
+              (upErr) => {
+                if (upErr) {
+                  return connection.rollback(() => {
+                    connection.release();
+                    callback(upErr);
+                  });
+                }
+                runNextUpdate();
+              }
+            );
+          }
+
+          runNextUpdate();
+        });
+      });
     });
   });
 }
