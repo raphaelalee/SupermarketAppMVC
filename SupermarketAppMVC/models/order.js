@@ -18,7 +18,7 @@ function createOrder(order, items, callback) {
     status = DEFAULT_ORDER_STATUS,
   } = order;
 
-  const payload = [
+  const basePayload = [
     orderNumber,
     userId,
     subtotal,
@@ -29,8 +29,6 @@ function createOrder(order, items, callback) {
     status,
   ];
 
-  // Use a connection from the pool to run a transaction so we can atomically create the order,
-  // insert items and decrement product quantities.
   db.getConnection((connErr, connection) => {
     if (connErr) return callback(connErr);
 
@@ -40,26 +38,49 @@ function createOrder(order, items, callback) {
         return callback(txErr);
       }
 
-      const sql = `
-            INSERT INTO orders 
-              (orderNumber, userId, subtotal, deliveryFee, total, deliveryMethod, paymentMethod, status, customerName, customerEmail, customerPhone)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      // Try inserting with customer contact columns first (newer schema)
+      const insertWithContact = `
+        INSERT INTO orders
+          (orderNumber, userId, subtotal, deliveryFee, total, deliveryMethod, paymentMethod, status, customerName, customerEmail, customerPhone)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       `;
 
-          // append customer contact info if present on order
-          const custName = order.customerName || null;
-          const custEmail = order.customerEmail || null;
-          const custPhone = order.customerPhone || null;
-          const fullPayload = payload.concat([custName, custEmail, custPhone]);
+      const custName = order.customerName || null;
+      const custEmail = order.customerEmail || null;
+      const custPhone = order.customerPhone || null;
+      const fullPayload = basePayload.concat([custName, custEmail, custPhone]);
 
-          connection.query(sql, fullPayload, (insErr, result) => {
-        if (insErr) {
+      function handleInsertResult(err, result) {
+        if (err) {
+          const unknownCol = /Unknown column/i.test(String(err.message || '')) || err.code === 'ER_BAD_FIELD_ERROR';
+          if (unknownCol) {
+            // Fallback to older schema without customer columns
+            const fallbackSql = `
+              INSERT INTO orders
+                (orderNumber, userId, subtotal, deliveryFee, total, deliveryMethod, paymentMethod, status)
+              VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+            `;
+            return connection.query(fallbackSql, basePayload, (fbErr, fbResult) => {
+              if (fbErr) {
+                return connection.rollback(() => {
+                  connection.release();
+                  callback(fbErr || err);
+                });
+              }
+              continueAfterInsert(fbResult);
+            });
+          }
+
           return connection.rollback(() => {
             connection.release();
-            callback(insErr);
+            callback(err);
           });
         }
 
+        continueAfterInsert(result);
+      }
+
+      function continueAfterInsert(result) {
         const orderId = result.insertId;
 
         if (!items || !items.length) {
@@ -85,7 +106,7 @@ function createOrder(order, items, callback) {
         ]);
 
         const itemsSql = `
-          INSERT INTO order_items 
+          INSERT INTO order_items
             (orderId, productId, name, price, quantity, subtotal)
           VALUES ?
         `;
@@ -98,14 +119,11 @@ function createOrder(order, items, callback) {
             });
           }
 
-          // Decrement product quantities for items that have a valid productId
           const updates = (items || []).filter((it) => it.id).map((it) => ({ id: it.id, qty: it.quantity || 0 }));
 
-          // Helper to sequentially run updates to avoid overwhelming the DB and to keep within transaction
           let idx = 0;
           function runNextUpdate() {
             if (idx >= updates.length) {
-              // All updates done — commit the transaction
               return connection.commit((commitErr) => {
                 if (commitErr) {
                   return connection.rollback(() => {
@@ -119,7 +137,6 @@ function createOrder(order, items, callback) {
             }
 
             const u = updates[idx++];
-            // Ensure quantity never goes below zero using GREATEST
             connection.query(
               'UPDATE products SET quantity = GREATEST(quantity - ?, 0) WHERE id = ?',
               [u.qty, u.id],
@@ -137,7 +154,10 @@ function createOrder(order, items, callback) {
 
           runNextUpdate();
         });
-      });
+      }
+
+      // Execute the initial insert attempt
+      connection.query(insertWithContact, fullPayload, handleInsertResult);
     });
   });
 }

@@ -65,11 +65,15 @@ exports.processCheckout = (req, res) => {
     if (err) {
       console.error("Failed to persist order:", err);
       req.flash("error", "Order placed but not saved to admin dashboard.");
-    } else if (orderId) {
-      orderPayload.id = orderId;
+    } else {
+      if (orderId) {
+        orderPayload.id = orderId;
+      }
+      // Only show success when the order was saved to the DB
+      req.flash("success", "Order placed successfully!");
     }
 
-    // Store order in session for receipt
+    // Store order in session for receipt (always keep receipt view available)
     req.session.lastOrder = orderPayload;
     req.session.cart = {}; // Clear cart
     if (req.session.user?.id) {
@@ -82,7 +86,6 @@ exports.processCheckout = (req, res) => {
         }
       });
     }
-    req.flash("success", "Order placed successfully!");
     res.redirect(`/order/${orderNumber}`);
   });
 };
