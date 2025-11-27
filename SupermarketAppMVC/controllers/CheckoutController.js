@@ -52,6 +52,10 @@ exports.processCheckout = (req, res) => {
     deliveryMethod,
     paymentMethod,
     shippingPhone: digitsOnly ? digitsOnly.slice(-8) : null,
+    // Persist customer contact info so guest orders can be claimed later
+    customerName: req.body.shippingName || (req.session.user && req.session.user.username) || null,
+    customerEmail: (req.session.user && req.session.user.email) || (req.body.customerEmail || null),
+    customerPhone: digitsOnly ? digitsOnly.slice(-8) : null,
     paid: true, // We treat completed checkout as paid
     createdAt: new Date().toISOString(),
     items,

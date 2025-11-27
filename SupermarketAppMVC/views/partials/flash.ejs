@@ -1,0 +1,32 @@
+<% if ((messages && messages.length) || (errors && errors.length)) { %>
+<div class="container mt-3">
+  <div id="globalFlash" class="position-relative">
+    <% if (messages && messages.length) { %>
+      <% messages.forEach(m => { %>
+        <div class="alert alert-success alert-dismissible fade show" role="alert">
+          <%= m %>
+          <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+      <% }) %>
+    <% } %>
+    <% if (errors && errors.length) { %>
+      <% errors.forEach(e => { %>
+        <div class="alert alert-danger alert-dismissible fade show" role="alert">
+          <%= e %>
+          <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+      <% }) %>
+    <% } %>
+  </div>
+</div>
+<script>
+  // Auto-hide global flash after 4s
+  (function () {
+    const container = document.getElementById('globalFlash');
+    if (!container) return;
+    setTimeout(() => {
+      container.querySelectorAll('.alert').forEach(a => { try { a.remove(); } catch (e) {} });
+    }, 4000);
+  })();
+</script>
+<% } %>

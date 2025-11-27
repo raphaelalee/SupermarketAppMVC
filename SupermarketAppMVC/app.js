@@ -2,6 +2,15 @@
 const express = require("express");
 const path = require("path");
 const session = require("express-session");
+// Optional persistent session store backed by MySQL. Install with: npm install express-mysql-session
+let MySQLStore;
+if (process.env.USE_MYSQL_SESSION === 'true') {
+  try {
+    MySQLStore = require('express-mysql-session')(session);
+  } catch (e) {
+    console.warn('express-mysql-session not installed; falling back to memory session store.');
+  }
+}
 const flash = require("connect-flash");
 const methodOverride = require("method-override");
 
@@ -30,13 +39,30 @@ app.use(express.urlencoded({ extended: false }));
 app.use(express.json());
 app.use(methodOverride("_method"));
 
-app.use(
-  session({
-    secret: "secret",
-    resave: false,
-    saveUninitialized: true,
-  })
-);
+const sessOptions = {
+  secret: process.env.SESSION_SECRET || 'secret',
+  resave: false,
+  saveUninitialized: false,
+  cookie: {
+    maxAge: 1000 * 60 * 60 * 24, // 1 day
+    sameSite: 'lax',
+  }
+};
+
+// Use MySQL-backed session store when available and enabled via env
+if (MySQLStore) {
+  const storeOptions = {
+    // Use the same connection settings as db.js via env vars
+    host: process.env.DB_HOST,
+    port: process.env.DB_PORT,
+    user: process.env.DB_USER,
+    password: process.env.DB_PASSWORD,
+    database: process.env.DB_NAME,
+  };
+  sessOptions.store = new MySQLStore(storeOptions);
+}
+
+app.use(session(sessOptions));
 app.use(flash());
 
 // Global variables
@@ -124,6 +150,10 @@ app.get("/register", UserController.renderRegister);
 app.post("/register", UserController.registerUser);
 app.get("/logout", UserController.logoutUser);
 // (forgot/reset password routes removed)
+
+// User orders (purchase history)
+app.get('/history', requireLogin, UserController.myOrders);
+app.get('/history/:id', requireLogin, UserController.viewMyOrder);
 
 // Cart
 app.post("/add-to-cart/:id", CartController.addToCart);

@@ -41,12 +41,18 @@ function createOrder(order, items, callback) {
       }
 
       const sql = `
-        INSERT INTO orders 
-          (orderNumber, userId, subtotal, deliveryFee, total, deliveryMethod, paymentMethod, status)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+            INSERT INTO orders 
+              (orderNumber, userId, subtotal, deliveryFee, total, deliveryMethod, paymentMethod, status, customerName, customerEmail, customerPhone)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       `;
 
-      connection.query(sql, payload, (insErr, result) => {
+          // append customer contact info if present on order
+          const custName = order.customerName || null;
+          const custEmail = order.customerEmail || null;
+          const custPhone = order.customerPhone || null;
+          const fullPayload = payload.concat([custName, custEmail, custPhone]);
+
+          connection.query(sql, fullPayload, (insErr, result) => {
         if (insErr) {
           return connection.rollback(() => {
             connection.release();
@@ -218,6 +224,54 @@ function getOrderWithItems(orderId, callback) {
   });
 }
 
+// Fetches all orders for a specific user (for user purchase history)
+function getOrdersByUser(userId, callback) {
+  const sql = `
+    SELECT id, orderNumber, total, paymentMethod, paid, status, createdAt
+    FROM orders
+    WHERE userId = ?
+    ORDER BY createdAt DESC, id DESC
+  `;
+  db.query(sql, [userId], (err, rows) => {
+    if (err) return callback(err);
+    callback(null, rows || []);
+  });
+}
+
+// Associate an existing order (by orderNumber) to a userId. Useful to claim guest orders after login.
+function updateOrderUser(orderNumber, userId, callback) {
+  const sql = `UPDATE orders SET userId = ? WHERE orderNumber = ?`;
+  db.query(sql, [userId, orderNumber], (err, result) => {
+    if (err) return callback(err);
+    callback(null, result);
+  });
+}
+
+// Claim recent guest orders by matching customer email or phone and assign them to a userId.
+// daysWindow limits how far back to search (default 30 days).
+function claimGuestOrdersByContact(userId, email, phone, daysWindow = 30, callback) {
+  if (!userId) return callback(new Error('Missing userId'));
+  const clauses = [];
+  const params = [userId];
+  if (email) { clauses.push('customerEmail = ?'); params.push(email); }
+  if (phone) { clauses.push('customerPhone = ?'); params.push(phone); }
+  if (!clauses.length) return callback(null, { affectedRows: 0 });
+
+  const sql = `
+    UPDATE orders
+    SET userId = ?
+    WHERE userId IS NULL
+      AND (${clauses.join(' OR ')})
+      AND createdAt >= DATE_SUB(NOW(), INTERVAL ? DAY)
+  `;
+  params.push(Number(daysWindow));
+
+  db.query(sql, params, (err, result) => {
+    if (err) return callback(err);
+    callback(null, result);
+  });
+}
+
 // Updates the order status field for a given order ID.
 function updateOrderStatus(orderId, status, callback) {
   db.query(
@@ -239,9 +293,9 @@ function getSummaryStats(callback) {
   const sql = `
     SELECT 
       COUNT(*) AS totalOrders,
-      COALESCE(SUM(total), 0) AS totalRevenue // COALESCE ensures 0 is returned instead of null on empty table
+      COALESCE(SUM(total), 0) AS totalRevenue
     FROM orders
-  `;
+  `; /* COALESCE ensures 0 is returned instead of null on empty table */
 
   db.query(sql, (err, rows) => {
     if (err) return callback(err);
@@ -347,9 +401,12 @@ module.exports = {
   listAllWithUsers,
   getOrderWithItems,
   updateOrderStatus,
+  getOrdersByUser,
+  updateOrderUser,
   getSummaryStats,
   getBestSellingProducts,
   getSalesByCategory,
   getSalesByHourRange,
   getReturningCustomers,
+  claimGuestOrdersByContact,
 };

@@ -2,6 +2,7 @@
 const bcrypt = require("bcryptjs");
 const Users = require("../models/user");
 const UserCart = require("../models/userCart");
+const Orders = require("../models/order");
 
 function normalizeCartEntry(entry) {
   if (typeof entry === "object" && entry !== null) {
@@ -169,7 +170,29 @@ exports.loginUser = (req, res) => {
       req.session.cart = mergeCarts(storedCart || {}, sessionCart);
       persistSessionCartToDb(user.id, req.session.cart, (persistErr) => {
         if (persistErr) console.error(`Failed to persist cart for user ${user.id}:`, persistErr);
-        req.flash("success", "Welcome back, " + user.username + "!"); return res.redirect(redirectTo);
+        // 1) Claim any recent guest orders that match this user's email or contact number
+        const userEmail = user.email || null;
+        const userPhone = user.contact || null;
+        Orders.claimGuestOrdersByContact(user.id, userEmail, userPhone, 30, (claimErr, claimRes) => {
+          if (claimErr) console.error(`Failed to claim guest orders for user ${user.id}:`, claimErr);
+
+          // 2) Additionally, if the current session has a lastOrder (immediate checkout), ensure it's associated
+          const lastOrder = req.session.lastOrder;
+          if (lastOrder && lastOrder.orderNumber && !lastOrder.userId) {
+            Orders.updateOrderUser(lastOrder.orderNumber, user.id, (updErr) => {
+              if (updErr) console.error(`Failed to associate order ${lastOrder.orderNumber} to user ${user.id}:`, updErr);
+              else {
+                req.session.lastOrder.userId = user.id;
+              }
+              req.flash("success", "Welcome back, " + user.username + "!");
+              return res.redirect(redirectTo);
+            });
+            return;
+          }
+
+          req.flash("success", "Welcome back, " + user.username + "!");
+          return res.redirect(redirectTo);
+        });
       });
     });
   });
@@ -181,4 +204,33 @@ exports.logoutUser = (req, res) => {
   const finalize = () => { req.session.destroy(() => { res.redirect("/login"); }); };
   if (!userId) return finalize();
   persistSessionCartToDb(userId, cartData, (err) => { if (err) console.error(`Failed to persist cart before logout for user ${userId}:`, err); finalize(); });
+};
+
+// =====================
+// User purchase history
+// =====================
+
+exports.myOrders = (req, res) => {
+  const user = req.session.user;
+  if (!user) { req.flash('error','Please log in to view your orders.'); return res.redirect('/login'); }
+  Orders.getOrdersByUser(user.id, (err, rows) => {
+    if (err) { console.error('Failed to load user orders:', err); req.flash('error','Unable to load your orders right now.'); return res.redirect('/shopping'); }
+    res.render('history', { orders: rows || [], messages: req.flash('success'), errors: req.flash('error') });
+  });
+};
+
+exports.viewMyOrder = (req, res) => {
+  const user = req.session.user;
+  const id = Number(req.params.id);
+  if (!user) { req.flash('error','Please log in to view your orders.'); return res.redirect('/login'); }
+  if (!id) { req.flash('error', 'Invalid order id'); return res.redirect('/history'); }
+  Orders.getOrderWithItems(id, (err, data) => {
+    if (err || !data || !data.order) { console.error('Failed to fetch order detail:', err); req.flash('error','Order not found.'); return res.redirect('/history'); }
+    // ensure this order belongs to the current user (or admin can view)
+    if (data.order.userId && data.order.userId !== user.id && user.role !== 'admin') {
+      req.flash('error','You are not authorized to view this order.');
+      return res.redirect('/history');
+    }
+    res.render('historyItem', { order: data.order, items: data.items || [], messages: req.flash('success'), errors: req.flash('error') });
+  });
 };
