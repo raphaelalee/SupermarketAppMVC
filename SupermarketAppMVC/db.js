@@ -1,6 +1,6 @@
-// db.js
 const mysql = require('mysql2');
-require('dotenv').config(); // Load variables from .env file
+const path = require('path');
+require('dotenv').config({ path: path.join(__dirname, '.env') }); // ✅ force THIS project's .env
 
 // Create a MySQL connection pool (better than single connection)
 const db = mysql.createPool({
@@ -26,3 +26,7 @@ db.getConnection((err, connection) => {
 
 // Export the pool to use in models
 module.exports = db;
+db.query("SELECT DATABASE() AS db", (err, rows) => {
+  if (err) return console.error("DB check failed:", err.message);
+  console.log("✅ Connected DB (SELECT DATABASE()):", rows[0].db);
+});
