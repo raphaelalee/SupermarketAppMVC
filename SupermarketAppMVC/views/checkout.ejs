@@ -124,7 +124,36 @@
     const __clientCartSubtotal = <%= Number(total || 0).toFixed(2) %>;
 
     function formatMoney(v){ return 'S$ ' + Number(v).toFixed(2); }
-    function updateDelivery(){ const sel = Array.from(deliveryRadios).find(r=>r.checked); const fee = sel ? Number(sel.dataset.fee||0) : 0; deliveryFeeInput.value = fee.toFixed(2); summaryDelivery.textContent = formatMoney(fee) + '*'; summaryTotal.textContent = formatMoney(Number(subtotal)+fee); }
+    function updateDelivery(){
+      const sel = Array.from(deliveryRadios).find(r=>r.checked);
+      const fee = sel ? Number(sel.dataset.fee||0) : 0;
+      deliveryFeeInput.value = fee.toFixed(2);
+      summaryDelivery.textContent = formatMoney(fee) + '*';
+      summaryTotal.textContent = formatMoney(Number(subtotal)+fee);
+
+      // set hidden delivery method so server receives the correct choice
+      const deliveryMethodInput = document.getElementById('deliveryMethod');
+      if (deliveryMethodInput && sel) deliveryMethodInput.value = sel.value;
+
+      // toggle visibility and HTML5 required attributes for delivery fields
+      const deliveryFieldsDiv = document.getElementById('delivery-fields');
+      if (deliveryFieldsDiv) {
+        if (sel && sel.value === 'pickup') {
+          deliveryFieldsDiv.style.display = 'none';
+          Array.from(deliveryFieldsDiv.querySelectorAll('input, textarea')).forEach(el=>{
+            // remember previous required state
+            el.dataset._wasRequired = el.required ? '1' : '0';
+            el.required = false;
+          });
+        } else {
+          deliveryFieldsDiv.style.display = '';
+          Array.from(deliveryFieldsDiv.querySelectorAll('input, textarea')).forEach(el=>{
+            // restore required if it was required before or is a core delivery field
+            if (el.dataset._wasRequired === '1' || ['shippingName','shippingPhone','shippingAddress'].includes(el.name)) el.required = true;
+          });
+        }
+      }
+    }
     deliveryRadios.forEach(r=>r.addEventListener('change', updateDelivery)); updateDelivery();
 
     function setPaypalError(msg){ if (!paypalError) return; paypalError.textContent = msg; paypalError.style.display = 'block'; }
