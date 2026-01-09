@@ -1,12 +1,14 @@
 // Use global fetch when available (Node 18+). Fallback to node-fetch if not.
 let fetchLib;
-if (typeof fetch === 'function') {
+if (typeof fetch === "function") {
   fetchLib = fetch;
 } else {
   try {
-    fetchLib = require('node-fetch');
+    // node-fetch v3 is ESM and exports default; handle both v2 & v3
+    const nf = require("node-fetch");
+    fetchLib = nf.default || nf;
   } catch (e) {
-    throw new Error('Global fetch is unavailable and node-fetch is not installed. Run npm install node-fetch or use Node 18+.');
+    throw new Error("Global fetch is unavailable and node-fetch is not installed. Run `npm install node-fetch` or use Node 18+.");
   }
 }
 
@@ -33,7 +35,7 @@ async function getAccessToken() {
   const data = await response.json();
 
   if (!response.ok) {
-    console.error("PayPal getAccessToken error:", data);
+    console.error("PayPal getAccessToken error:", response.status, data);
     throw new Error("Failed to get PayPal access token");
   }
 
@@ -68,7 +70,7 @@ async function createOrder(amount) {
   const data = await response.json();
 
   if (!response.ok) {
-    console.error("PayPal createOrder error:", data);
+    console.error("PayPal createOrder error:", response.status, data);
     throw new Error("Failed to create PayPal order");
   }
 
@@ -90,7 +92,7 @@ async function captureOrder(orderId) {
   const data = await response.json();
 
   if (!response.ok) {
-    console.error("PayPal captureOrder error:", data);
+    console.error("PayPal captureOrder error:", response.status, data);
     throw new Error("Failed to capture PayPal order");
   }
 

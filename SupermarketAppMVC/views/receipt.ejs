@@ -114,6 +114,47 @@
       </div>
     </section>
 
+    <% if (order.paymentInstructions) { %>
+      <section class="row mt-3">
+        <div class="col-md-12">
+          <div class="border rounded-3 p-3">
+            <h6 class="text-muted mb-2">Payment Instructions</h6>
+            <% const pi = order.paymentInstructions; %>
+            <p class="mb-1"><strong>Method:</strong> <%= (pi.method || order.paymentMethod || '').toUpperCase() %></p>
+            <% if (pi.reference) { %><p class="mb-1"><strong>Reference:</strong> <%= pi.reference %></p><% } %>
+            <% if (pi.bankName) { %>
+              <p class="mb-1"><strong>Bank:</strong> <%= pi.bankName %></p>
+              <p class="mb-1"><strong>Account:</strong> <%= pi.accountNumber %> (<%= pi.accountName %>)</p>
+            <% } %>
+            <% if (pi.qrImage) { %>
+              <div class="mb-2"> <img src="<%= pi.qrImage %>" alt="PayNow QR" style="max-width:180px;" /> </div>
+            <% } %>
+            <% if (pi.note) { %><p class="text-muted small mb-0"><%= pi.note %></p><% } %>
+          </div>
+        </div>
+      </section>
+    <% } %>
+
+    <% if (!order.paid && order.paymentInstructions) { %>
+      <section class="row mt-3">
+        <div class="col-md-12">
+          <div class="border rounded-3 p-3">
+            <h6 class="text-muted mb-2">Confirm Payment</h6>
+            <form method="POST" action="/order/confirm-payment" class="row g-2">
+              <input type="hidden" name="orderNumber" value="<%= order.orderNumber %>">
+              <div class="col-md-6">
+                <label class="form-label small text-muted">Payment reference (optional)</label>
+                <input name="paymentRef" class="form-control form-control-sm" placeholder="e.g. bank txn id or reference">
+              </div>
+              <div class="col-md-6 d-flex align-items-end">
+                <button type="submit" class="btn btn-success btn-sm">Mark Payment Complete</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      </section>
+    <% } %>
+
     <div class="d-flex justify-content-between align-items-center border-top pt-3 mt-4">
       <p class="text-muted small mb-0">FreshMart Pte Ltd � hello@freshmart.sg � +65 6123 4567</p>
       <div>

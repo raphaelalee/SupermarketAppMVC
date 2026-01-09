@@ -1,9 +1,4 @@
 // app.js
-<<<<<<< HEAD
-require('dotenv').config();
-const express = require("express");
-=======
->>>>>>> d4f224f02d673e09c1aa0ab8bf0ae356b2acb59f
 const path = require("path");
 require("dotenv").config({ path: path.join(__dirname, ".env") });
 
@@ -179,13 +174,12 @@ app.get("/checkout", CheckoutController.renderCheckout);
 app.post("/checkout", CheckoutController.processCheckout);
 app.get("/order/:orderNumber", CheckoutController.renderReceipt);
 
-<<<<<<< HEAD
 // ✅ PayPal (REST example style)
 app.post("/paypal/create-order", CheckoutController.createPaypalOrder);
 app.post("/paypal/capture-order", CheckoutController.capturePaypalOrder);
+// Customer-confirm payment for offline methods (PayNow / Bank / COD)
+app.post('/order/confirm-payment', CheckoutController.confirmPayment);
 // Admin
-=======
->>>>>>> d4f224f02d673e09c1aa0ab8bf0ae356b2acb59f
 app.get("/admin/orders", requireLogin, requireAdmin, AdminController.ordersDashboard);
 app.get("/admin/orders/:id", requireLogin, requireAdmin, AdminController.viewOrder);
 app.post("/admin/orders/:id/status", requireLogin, requireAdmin, AdminController.updateOrderStatus);

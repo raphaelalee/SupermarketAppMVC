@@ -304,6 +304,17 @@ function updateOrderStatus(orderId, status, callback) {
   );
 }
 
+// Mark an order as paid (by orderNumber). `meta` can be any extra info (reference, payer id).
+function markOrderPaid(orderNumber, meta, callback) {
+  const status = 'paid';
+  // Try to update paid flag and status; ignore extra meta fields (not present in older schemas)
+  const sql = `UPDATE orders SET paid = 1, status = ? WHERE orderNumber = ?`;
+  db.query(sql, [status, orderNumber], (err, result) => {
+    if (err) return callback(err);
+    return callback(null, result);
+  });
+}
+
 // ==============================
 // DASHBOARD + ANALYTICS (Heavy lifting happens in SQL)
 // ==============================
@@ -429,4 +440,5 @@ module.exports = {
   getSalesByHourRange,
   getReturningCustomers,
   claimGuestOrdersByContact,
+  markOrderPaid,
 };

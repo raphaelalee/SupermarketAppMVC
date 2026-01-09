@@ -1,4 +1,4 @@
-﻿<%- include('partials/header') %> 
+﻿<%- include('partials/header') %>
 
 <section class="checkout-shell" style="background:#f4f6f7;">
   <div class="container py-5">
@@ -13,16 +13,9 @@
         <form method="POST" action="/checkout" id="checkout-form" class="card border-0 shadow-sm p-4" novalidate>
           <input type="hidden" name="deliveryMethod" id="deliveryMethod" value="standard">
           <input type="hidden" name="deliveryFee" id="deliveryFee" value="3.50">
-
-<<<<<<< HEAD
-          <!-- PayPal hidden flags -->
           <input type="hidden" name="paypalOrderId" id="paypalOrderId" value="">
           <input type="hidden" name="paypalCaptureId" id="paypalCaptureId" value="">
           <input type="hidden" name="paypalPaid" id="paypalPaid" value="0">
-=======
-          <!-- Optional: store PayPal order id if you want -->
-          <input type="hidden" name="paypalOrderId" id="paypalOrderId" value="">
->>>>>>> d4f224f02d673e09c1aa0ab8bf0ae356b2acb59f
 
           <section class="mb-4">
             <div class="d-flex justify-content-between align-items-center mb-2">
@@ -30,628 +23,124 @@
               <span class="badge bg-success-subtle text-success">Step 1 of 2</span>
             </div>
             <p class="text-muted small mb-3">Choose the option that works best for your schedule.</p>
-            
-            <div class="row g-3"> 
+
+            <div class="row g-3">
               <div class="col-12">
                 <label class="checkout-option d-flex align-items-center">
                   <input type="radio" name="delivery" value="standard" data-fee="3.50" checked>
-                  <div class="checkout-option-body">
-                    <strong>Standard Delivery</strong>
-                    <span class="text-muted small">2-3 days</span>
-                  </div>
+                  <div class="checkout-option-body"><strong>Standard Delivery</strong><span class="text-muted small">2-3 days</span></div>
                   <span class="price-tag">$3.50</span>
                 </label>
               </div>
-
               <div class="col-12">
                 <label class="checkout-option d-flex align-items-center">
                   <input type="radio" name="delivery" value="express" data-fee="6.00">
-                  <div class="checkout-option-body">
-                    <strong>Express Delivery</strong>
-                    <span class="text-muted small">Same day</span>
-                  </div>
+                  <div class="checkout-option-body"><strong>Express Delivery</strong><span class="text-muted small">Same day</span></div>
                   <span class="price-tag">$6.00</span>
                 </label>
               </div>
-
               <div class="col-12">
                 <label class="checkout-option d-flex align-items-center">
                   <input type="radio" name="delivery" value="pickup" data-fee="0">
-                  <div class="checkout-option-body">
-                    <strong>Store Pickup</strong>
-                    <span class="text-muted small">Collect today • Free</span>
-                  </div>
+                  <div class="checkout-option-body"><strong>Store Pickup</strong><span class="text-muted small">Collect today • Free</span></div>
                   <span class="price-tag">$0.00</span>
                 </label>
               </div>
-            </div> 
-
-            <div class="aml-note">
-              <div class="shield">✓</div>
-              <div>
-                <strong class="d-block">Secure & AML checks</strong>
-                <small class="text-muted">We perform AML and identity verification for high-value orders. Payments are
-                  encrypted and PCI-DSS compliant.</small>
-              </div>
             </div>
 
-            <div class="row g-3 mt-2" id="delivery-fields"> 
-              <div class="col-12">
-                <label class="form-label small text-muted">Recipient name</label>
-                <input type="text" class="form-control" name="shippingName" placeholder="Full name for delivery" required>
-              </div>
-              <div class="col-12">
-                <label class="form-label small text-muted">Contact number</label>
-                <input type="tel" class="form-control" name="shippingPhone" id="shippingPhone" placeholder="+65 81234567"
-                  pattern="^(\+65\s?)?\d{8}$" required>
-                <div class="invalid-feedback">Enter an 8-digit Singapore number (optionally prefixed with +65).</div>
-              </div>
-              <div class="col-12">
-                <label class="form-label small text-muted">Delivery address</label>
-                <textarea class="form-control" name="shippingAddress" rows="3" placeholder="Block / Unit / Postal code"
-                  required></textarea>
-                <div class="invalid-feedback" id="addr-feedback">Please put unit number and full address</div>
-              </div>
+            <div class="aml-note mt-3"><div class="shield">✓</div><div><strong class="d-block">Secure & AML checks</strong><small class="text-muted">We perform AML and identity verification for high-value orders. Payments are encrypted and PCI-DSS compliant.</small></div></div>
+
+            <div class="row g-3 mt-2" id="delivery-fields">
+              <div class="col-12"><label class="form-label small text-muted">Recipient name</label><input type="text" class="form-control" name="shippingName" placeholder="Full name for delivery" required></div>
+              <div class="col-12"><label class="form-label small text-muted">Contact number</label><input type="tel" class="form-control" name="shippingPhone" id="shippingPhone" placeholder="+65 81234567" pattern="^(\+65\s?)?\d{8}$" required><div class="invalid-feedback">Enter an 8-digit Singapore number (optionally prefixed with +65).</div></div>
+              <div class="col-12"><label class="form-label small text-muted">Delivery address</label><textarea class="form-control" name="shippingAddress" rows="3" placeholder="Block / Unit / Postal code" required></textarea><div class="invalid-feedback" id="addr-feedback">Please put unit number and full address</div></div>
             </div>
           </section>
 
           <section class="mb-4">
-            <div class="d-flex justify-content-between align-items-center mb-2">
-              <h4 class="mb-0 fw-semibold">Payment method</h4>
-              <span class="badge bg-success-subtle text-success">Step 2 of 2</span>
-            </div>
+            <div class="d-flex justify-content-between align-items-center mb-2"><h4 class="mb-0 fw-semibold">Payment method</h4><span class="badge bg-success-subtle text-success">Step 2 of 2</span></div>
             <p class="text-muted small mb-3">Pick how you’d like to pay.</p>
-            
-            <div class="row g-3">
-              <div class="col-12">
-                <label class="checkout-option align-items-start">
-                  <input type="radio" name="payment" value="paynow" checked>
-                  <div class="checkout-option-body">
-                    <div class="d-flex justify-content-between align-items-center">
-                      <strong>PayNow</strong>
-                      <span class="badge bg-success text-white">Recommended</span>
-                    </div>
-                    <span class="text-muted small">UEN: 202412345A • Instant confirmation</span>
-                  </div>
-                </label>
-              </div>
+            <div class="row g-3"><div class="col-12">
+              <label class="d-flex align-items-center mb-2"><input type="radio" name="payment" value="card" checked><div class="ms-2">Card (placeholder)</div></label>
+              <label class="d-flex align-items-center mb-2"><input type="radio" name="payment" value="paypal"><div class="ms-2">PayPal</div></label>
+              <label class="d-flex align-items-center mb-2"><input type="radio" name="payment" value="paynow"><div class="ms-2">PayNow (QR)</div></label>
+              <label class="d-flex align-items-center mb-2"><input type="radio" name="payment" value="bank"><div class="ms-2">Bank Transfer</div></label>
+              <label class="d-flex align-items-center mb-2"><input type="radio" name="payment" value="cod"><div class="ms-2">Cash on Delivery</div></label>
+              <div id="paypal-wrap" style="display:none; margin-top:10px;"><div id="paypal-error" style="display:none;color:#b00020;margin-bottom:8px"></div><div id="paypal-button-container"></div></div>
+            </div></div>
 
-              <div class="col-12">
-                <label class="checkout-option d-flex align-items-center">
-                  <input type="radio" name="payment" value="paypal">
-                  <div class="checkout-option-body d-flex align-items-center justify-content-between w-100">
-                    <div>
-                      <strong>PayPal</strong>
-                      <div class="text-muted small">Pay with PayPal balance or card</div>
-                    </div>
-                    <span class="badge bg-primary-subtle text-primary">Online</span>
-                  </div>
-                </label>
-              </div>
-
-              <div class="col-12">
-                <label class="checkout-option d-flex align-items-center">
-                  <input type="radio" name="payment" value="applepay">
-                  <div class="checkout-option-body d-flex align-items-center gap-3">
-                    <div class="payment-logo" aria-hidden="true" style="width:44px;">
-                      <svg width="44" height="28" viewBox="0 0 44 28" fill="none" xmlns="http://www.w3.org/2000/svg">
-                        <rect rx="6" width="44" height="28" fill="#111" />
-                        <text x="22" y="19" font-size="12" text-anchor="middle" fill="#fff"
-                          font-family="Arial,Helvetica,sans-serif">Apple</text>
-                      </svg>
-                    </div>
-                    <div>
-                      <strong>Apple Pay</strong>
-                      <div class="text-muted small">Fast secure tap-to-pay</div>
-                    </div>
-                  </div>
-                </label>
-              </div>
-
-              <div class="col-12">
-                <label class="checkout-option d-flex align-items-center">
-                  <input type="radio" name="payment" value="gpay">
-                  <div class="checkout-option-body d-flex align-items-center gap-3">
-                    <div class="payment-logo" aria-hidden="true" style="width:44px;">
-                      <svg width="60" height="28" viewBox="0 0 60 28" fill="none" xmlns="http://www.w3.org/2000/svg">
-                        <rect rx="6" width="60" height="28" fill="#fff" stroke="#e6e6e6" />
-                        <text x="30" y="19" font-size="12" text-anchor="middle" fill="#202124"
-                          font-family="Arial,Helvetica,sans-serif">G Pay</text>
-                      </svg>
-                    </div>
-                    <div>
-                      <strong>Google Pay</strong>
-                      <div class="text-muted small">Quick secure checkout</div>
-                    </div>
-                  </div>
-                </label>
-              </div>
-
-              <div class="col-12">
-                <label class="checkout-option align-items-start">
-                  <input type="radio" name="payment" value="card">
-                  <div class="checkout-option-body">
-                    <strong>Credit / Debit Card</strong>
-                    <span class="text-muted small">Visa, Mastercard • Secured by SSL</span>
-                  </div>
-                </label>
-              </div>
-
-              <!-- ✅ PayPal option -->
-              <div class="col-12">
-                <label class="checkout-option align-items-start">
-                  <input type="radio" name="payment" value="paypal">
-                  <div class="checkout-option-body">
-                    <strong>PayPal</strong>
-                    <span class="text-muted small">Pay securely with PayPal</span>
-
-                    <div id="paypal-wrap" class="mt-3" style="display:none;">
-                      <div id="paypal-error" class="alert alert-danger py-2 px-3 small mb-2" style="display:none;"></div>
-                      <div id="paypal-button-container"></div>
-                      <div class="text-muted small mt-2">Click PayPal to pay, then we’ll finalize your order.</div>
-                    </div>
-                  </div>
-                </label>
-              </div>
-            </div>
-
-<<<<<<< HEAD
-=======
-            <!-- PayPal section -->
-            <div id="paypal-section" class="mt-3" style="display:none;">
-              <div class="alert alert-info small mb-2">
-                You’ll complete payment with PayPal, then we’ll confirm your order.
-              </div>
-              <div id="paypal-button-container"></div>
-            </div>
-
->>>>>>> d4f224f02d673e09c1aa0ab8bf0ae356b2acb59f
-            <div class="card-fields mt-3" id="card-fields">
-              <div class="row g-3">
-                <div class="col-12">
-                  <label class="form-label small text-muted">Name on card</label>
-                  <input type="text" class="form-control" name="cardName" placeholder="Full name" required>
-                </div>
-                <div class="col-12">
-                  <label class="form-label small text-muted">Card number</label>
-                  <input type="text" class="form-control" name="cardNumber" placeholder="1111 2222 3333 4444" maxlength="19"
-                    pattern="\d{13,19}" required>
-                </div>
-                <div class="col-6">
-                  <label class="form-label small text-muted">Expiry</label>
-                  <input type="text" class="form-control" name="cardExpiry" placeholder="MM/YY" maxlength="5"
-                    pattern="(0[1-9]|1[0-2])\/\d{2}" required>
-                </div>
-                <div class="col-6">
-                  <label class="form-label small text-muted">CVV</label>
-                  <input type="text" class="form-control" name="cardCvv" placeholder="123" maxlength="4" pattern="\d{3,4}"
-                    required>
-                </div>
-              </div>
+            <div class="mt-3">
+              <button type="submit" id="complete-order-btn" class="btn btn-primary btn-lg w-100">Complete Order</button>
             </div>
           </section>
 
-          <button type="submit" class="btn btn-success w-100 py-3 fw-semibold">Complete Payment</button>
-          <p class="text-muted small text-center mt-3 mb-0">Transactions are encrypted. Need help? <a href="/contact">Contact
-              us</a>.</p>
         </form>
       </div>
 
-      <div class="col-lg-5">
-        <aside class="card border-0 shadow-sm p-4 mb-4">
-          <h5 class="mb-3 fw-semibold">Order summary</h5>
-          <div class="border rounded-3 mb-3">
-            <table class="table mb-0 align-middle">
-              <tbody>
-                <% if ((items || []).length===0) { %>
-                  <tr>
-                    <td class="text-muted small" colspan="3">Your basket is empty.</td>
-                  </tr>
-                <% } else { %>
-                  <% (items || []).forEach(it=> { %>
-                    <tr>
-                      <td style="width:56px;">
-                        <img src="/images/<%= it.image || 'broccoli.png' %>" alt="<%= it.productName %>"
-                          class="img-fluid rounded" style="max-width:48px;">
-                      </td>
-                      <td>
-                        <p class="mb-0 fw-semibold"><%= it.productName %></p>
-                        <p class="text-muted small mb-0">Qty <%= it.quantity %> • $<%= Number(it.price).toFixed(2) %></p>
-                      </td>
-                      <td class="text-end fw-semibold">$<%= Number(it.subtotal || 0).toFixed(2) %></td>
-                    </tr>
-                  <% }) %>
-                <% } %>
-              </tbody>
-            </table>
-          </div>
+      <aside class="col-lg-5">
+        <div class="card border-0 shadow-sm p-4 mb-3">
+          <h6 class="fw-semibold mb-3">Order summary</h6>
+          <div class="table-responsive"><table class="table table-borderless small mb-0"><tbody>
+            <% if (items && items.length) { %>
+              <% items.forEach(function(it){ %>
+                <% var _name = it.name || it.title || 'Item'; var _qty = Number(it.qty || it.quantity || 1) || 1; var _price = Number(it.price || 0); var _line = (typeof it.subtotal === 'number') ? Number(it.subtotal) : (_price * _qty); %>
+                <tr><td><%= _name %> x <%= _qty %></td><td class="text-end">S$ <%= (_line && !isNaN(_line) ? _line : 0).toFixed(2) %></td></tr>
+              <% }) %>
+            <% } else { %>
+              <tr><td colspan="2">Your cart is empty</td></tr>
+            <% } %>
+          </tbody></table></div>
 
-          <div class="summary-row">
-            <span>Subtotal</span>
-            <strong id="summary-subtotal">S$ <%= total.toFixed(2) %></strong>
-          </div>
-          <div class="summary-row">
-            <span>Delivery</span>
-            <strong id="summary-delivery">S$ 3.50*</strong>
-          </div>
-          <div class="summary-row">
-            <span>Savings</span>
-            <strong class="text-success">S$ 0.00</strong>
-          </div>
-          <p class="text-muted small mb-3">*Exact amount updates when you change the delivery option.</p>
-          <div class="summary-row total-row">
-            <span>Amount due</span>
-            <strong id="summary-total">S$ <%= (total + 3.5).toFixed(2) %></strong>
-          </div>
-        </aside>
+          <div class="summary-row mt-3"><span>Subtotal</span><strong id="summary-subtotal">S$ <%= Number(total || 0).toFixed(2) %></strong></div>
+          <div class="summary-row"><span>Delivery</span><strong id="summary-delivery">S$ 3.50*</strong></div>
+          <div class="summary-row total-row mt-2"><span>Amount due</span><strong id="summary-total">S$ <%= (Number(total || 0) + 3.5).toFixed(2) %></strong></div>
 
-        <div class="card border-0 shadow-sm p-4">
-          <h6 class="fw-semibold mb-3">Why people love FreshMart</h6>
-          <ul class="list-unstyled text-muted small mb-0">
-            <li class="mb-2">• Curated, farm-fresh produce delivered daily.</li>
-            <li class="mb-2">• Free surprise gift with every order above S$80.</li>
-            <li class="mb-2">• Concierge support on WhatsApp & phone.</li>
-          </ul>
         </div>
-      </div>
+      </aside>
     </div>
   </div>
 </section>
 
 <%- include('partials/footer') %>
 
-<!-- PayPal SDK -->
-<script src="https://www.paypal.com/sdk/js?client-id=<%= PAYPAL_CLIENT_ID %>&currency=SGD&intent=capture"></script>
-
+<!-- PayPal SDK and client script (single copy) -->
+<script src="https://www.paypal.com/sdk/js?client-id=<%= paypalClientId %>&currency=<%= paypalCurrency %>"></script>
 <script>
-  (function () {
-    // --- Get DOM Elements and Server-Side Subtotal ---
+  (function(){
     const deliveryRadios = document.querySelectorAll('input[name="delivery"]');
-    const deliveryMethodInput = document.getElementById('deliveryMethod');
     const deliveryFeeInput = document.getElementById('deliveryFee');
     const summaryDelivery = document.getElementById('summary-delivery');
     const summaryTotal = document.getElementById('summary-total');
-    const subtotal = <%= total.toFixed(2) %>; // server subtotal
-
-    const cardFields = document.getElementById('card-fields');
-    const paymentRadios = document.querySelectorAll('input[name="payment"]');
-
-    const paypalSection = document.getElementById('paypal-section');
-    const paypalOrderIdInput = document.getElementById('paypalOrderId');
-
-    const deliveryFields = document.getElementById('delivery-fields');
-    const deliveryInputs = deliveryFields ? deliveryFields.querySelectorAll('input, textarea') : [];
-    const cardInputs = cardFields ? cardFields.querySelectorAll('input') : [];
-    const checkoutForm = document.getElementById('checkout-form');
-    const shippingAddressEl = checkoutForm.querySelector('[name="shippingAddress"]');
-    const shippingPhoneEl = checkoutForm.querySelector('[name="shippingPhone"]');
-
-    function formatMoney(val) {
-      return 'S$ ' + Number(val).toFixed(2);
-    }
-
-    function updateDelivery() {
-      const selected = Array.from(deliveryRadios).find(r => r.checked);
-      const fee = selected ? Number(selected.dataset.fee || 0) : 0;
-
-      deliveryMethodInput.value = selected ? selected.value : 'standard';
-      deliveryFeeInput.value = fee.toFixed(2);
-
-      summaryDelivery.textContent = formatMoney(fee) + '*';
-      summaryTotal.textContent = formatMoney(Number(subtotal) + fee);
-
-      if (deliveryFields) {
-        const isPickup = selected && selected.value === 'pickup';
-        deliveryFields.style.display = isPickup ? 'none' : 'flex';
-        deliveryFields.style.flexDirection = 'column';
-        deliveryInputs.forEach((input) => {
-          input.required = !isPickup;
-          input.disabled = isPickup;
-        });
-      }
-    }
-
-    function togglePaymentBlocks() {
-      const selected = Array.from(paymentRadios).find(r => r.checked);
-      const payment = selected ? selected.value : '';
-      const showCard = payment === 'card';
-<<<<<<< HEAD
-=======
-      const showPayPal = payment === 'paypal';
->>>>>>> d4f224f02d673e09c1aa0ab8bf0ae356b2acb59f
-
-      cardFields.style.display = showCard ? 'block' : 'none';
-      cardInputs.forEach((input) => {
-        input.required = showCard;
-        input.disabled = !showCard;
-      });
-
-<<<<<<< HEAD
-      // Show PayPal UI only if PayPal selected
-      const paypalWrap = document.getElementById('paypal-wrap');
-      if (paypalWrap) paypalWrap.style.display = payment === 'paypal' ? 'block' : 'none';
-=======
-      if (paypalSection) {
-        paypalSection.style.display = showPayPal ? 'block' : 'none';
-      }
->>>>>>> d4f224f02d673e09c1aa0ab8bf0ae356b2acb59f
-    }
-
-    deliveryRadios.forEach(r => r.addEventListener('change', updateDelivery));
-    paymentRadios.forEach(r => r.addEventListener('change', () => {
-      togglePaymentBlocks();
-      const selected = Array.from(paymentRadios).find(x => x.checked);
-      if (selected && selected.value === 'paypal') ensurePayPalButtons();
-    }));
-
-    updateDelivery();
-    togglePaymentBlocks();
-
-<<<<<<< HEAD
-=======
-    // --- PayPal Buttons (CLIENT-ONLY, NO /api/paypal ROUTES) ---
-    let paypalRendered = false;
-
-    async function ensurePayPalButtons() {
-      if (paypalRendered) return;
-      if (typeof paypal === 'undefined') return;
-
-      paypal.Buttons({
-        createOrder: (data, actions) => {
-          const fee = Number(document.getElementById('deliveryFee')?.value || 0);
-          const totalAmount = Number(subtotal) + fee;
-
-          if (!Number.isFinite(totalAmount) || totalAmount <= 0) {
-            throw new Error("Invalid total: " + totalAmount);
-          }
-
-          return actions.order.create({
-            purchase_units: [{
-              amount: {
-                currency_code: "SGD",
-                value: totalAmount.toFixed(2)
-              }
-            }]
-          });
-        },
-
-        onApprove: (data, actions) => {
-          return actions.order.capture().then(() => {
-            if (paypalOrderIdInput) paypalOrderIdInput.value = data.orderID;
-
-            // after payment, submit normal checkout form to your server
-            checkoutForm.submit();
-          });
-        },
-
-        onError: (err) => {
-          console.error("PayPal error:", err);
-          alert("PayPal error. Check console for details.");
-        }
-      }).render("#paypal-button-container");
-
-      paypalRendered = true;
-    }
-
-    const selectedPaymentInit = Array.from(paymentRadios).find(r => r.checked);
-    if (selectedPaymentInit && selectedPaymentInit.value === 'paypal') ensurePayPalButtons();
-
-    // --- Custom Form Validation (on submit) ---
->>>>>>> d4f224f02d673e09c1aa0ab8bf0ae356b2acb59f
-    checkoutForm.addEventListener('submit', (event) => {
-      if (shippingAddressEl) shippingAddressEl.setCustomValidity('');
-
-      const selectedDelivery = Array.from(deliveryRadios).find(r => r.checked);
-      const isPickup = selectedDelivery && selectedDelivery.value === 'pickup';
-
-<<<<<<< HEAD
-=======
-      const selectedPayment = Array.from(paymentRadios).find(r => r.checked);
-      const isPayPal = selectedPayment && selectedPayment.value === 'paypal';
-
-      // If PayPal selected, block normal submit and scroll to PayPal buttons
-      if (isPayPal) {
-        event.preventDefault();
-        event.stopPropagation();
-
-        if (!checkoutForm.checkValidity()) {
-          checkoutForm.classList.add('was-validated');
-          if (shippingAddressEl && !shippingAddressEl.checkValidity()) shippingAddressEl.focus();
-          return;
-        }
-
-        document.getElementById("paypal-button-container")?.scrollIntoView({ behavior: "smooth" });
-        return;
-      }
-
->>>>>>> d4f224f02d673e09c1aa0ab8bf0ae356b2acb59f
-      if (!isPickup && shippingAddressEl) {
-        const addr = shippingAddressEl.value || '';
-        const unitPattern = /(#|Unit|Blk|\d+[-]\d+|unit|blk)/i;
-        if (!unitPattern.test(addr)) {
-          const msg = 'Please put unit number and full address';
-          shippingAddressEl.setCustomValidity(msg);
-          const fb = document.getElementById('addr-feedback');
-          if (fb) fb.textContent = msg;
-          shippingAddressEl.classList.add('is-invalid');
-        }
-      }
-
-      if (!isPickup && shippingPhoneEl) {
-        const v = (shippingPhoneEl.value || '').trim();
-        const pattern = /^(\+65\s?)?\d{8}$/;
-        if (!pattern.test(v)) {
-          event.preventDefault();
-          event.stopPropagation();
-          shippingPhoneEl.classList.add('is-invalid');
-          const fb = shippingPhoneEl.parentElement.querySelector('.invalid-feedback');
-          if (fb) fb.textContent = 'Contact number must be 8 digits (optionally prefixed with +65).';
-          shippingPhoneEl.focus();
-          return;
-        }
-      }
-
-      if (!checkoutForm.checkValidity()) {
-        event.preventDefault();
-        event.stopPropagation();
-        checkoutForm.classList.add('was-validated');
-        if (shippingAddressEl && !shippingAddressEl.checkValidity()) shippingAddressEl.focus();
-      }
-    });
-
-    const addrFeedbackEl = document.getElementById('addr-feedback');
-    if (shippingAddressEl) {
-      shippingAddressEl.addEventListener('input', () => {
-        shippingAddressEl.setCustomValidity('');
-        shippingAddressEl.classList.remove('is-invalid');
-        if (addrFeedbackEl) addrFeedbackEl.textContent = 'Please put unit number and full address';
-      });
-    }
-<<<<<<< HEAD
-=======
-
->>>>>>> d4f224f02d673e09c1aa0ab8bf0ae356b2acb59f
-    deliveryRadios.forEach(r => r.addEventListener('change', () => {
-      if (shippingAddressEl) {
-        shippingAddressEl.setCustomValidity('');
-        shippingAddressEl.classList.remove('is-invalid');
-        if (addrFeedbackEl) addrFeedbackEl.textContent = 'Please put unit number and full address';
-      }
-    }));
-  })();
-</script>
-<<<<<<< HEAD
-
-<!-- ✅ PayPal SDK (requires paypalClientId + paypalCurrency passed from controller) -->
-<script src="https://www.paypal.com/sdk/js?client-id=<%= paypalClientId %>&currency=<%= paypalCurrency %>"></script>
-
-<script>
-  (function () {
-    const checkoutForm = document.getElementById('checkout-form');
+    const subtotal = <%= Number(total || 0).toFixed(2) %>;
     const paymentRadios = document.querySelectorAll('input[name="payment"]');
     const paypalWrap = document.getElementById('paypal-wrap');
     const paypalError = document.getElementById('paypal-error');
-
-    const deliveryFeeInput = document.getElementById('deliveryFee');
-
-    const paypalPaidEl = document.getElementById('paypalPaid');
     const paypalOrderIdEl = document.getElementById('paypalOrderId');
+    const paypalPaidEl = document.getElementById('paypalPaid');
     const paypalCaptureIdEl = document.getElementById('paypalCaptureId');
+    const checkoutForm = document.getElementById('checkout-form');
 
-    let paypalButtonRendered = false;
+    const __clientCartItems = <%- JSON.stringify(items || []) %>;
+    const __clientCartSubtotal = <%= Number(total || 0).toFixed(2) %>;
 
-    function selectedPayment() {
-      const selected = Array.from(paymentRadios).find(r => r.checked);
-      return selected ? selected.value : '';
-    }
+    function formatMoney(v){ return 'S$ ' + Number(v).toFixed(2); }
+    function updateDelivery(){ const sel = Array.from(deliveryRadios).find(r=>r.checked); const fee = sel ? Number(sel.dataset.fee||0) : 0; deliveryFeeInput.value = fee.toFixed(2); summaryDelivery.textContent = formatMoney(fee) + '*'; summaryTotal.textContent = formatMoney(Number(subtotal)+fee); }
+    deliveryRadios.forEach(r=>r.addEventListener('change', updateDelivery)); updateDelivery();
 
-    function showPaypalWrap(show) {
-      if (!paypalWrap) return;
-      paypalWrap.style.display = show ? 'block' : 'none';
-      if (!show && paypalError) paypalError.style.display = 'none';
-    }
+    function setPaypalError(msg){ if (!paypalError) return; paypalError.textContent = msg; paypalError.style.display = 'block'; }
 
-    function setPaypalError(msg) {
-      if (!paypalError) return;
-      paypalError.textContent = msg;
-      paypalError.style.display = 'block';
-    }
-
-    function maybeRenderPaypal() {
-      if (paypalButtonRendered) return;
-
-      if (typeof paypal === 'undefined' || !paypal?.Buttons) {
-        setPaypalError("PayPal SDK failed to load. Check your Client ID.");
-        return;
-      }
-
+    let paypalRendered = false;
+    function maybeRenderPaypal(){
+      if (paypalRendered) return; if (typeof paypal === 'undefined' || !paypal?.Buttons) { setPaypalError('PayPal SDK failed to load.'); return; }
       paypal.Buttons({
-        createOrder: function () {
-          const deliveryFee = Number(deliveryFeeInput?.value || 0);
-
-          return fetch("/paypal/create-order", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ deliveryFee: deliveryFee.toFixed(2) })
-          })
-          .then(res => res.json())
-          .then(data => {
-            if (!data?.id) throw new Error(data?.error || "No order id returned");
-            paypalOrderIdEl.value = data.id;
-            return data.id;
-          })
-          .catch(err => {
-            console.error(err);
-            setPaypalError("Could not start PayPal checkout. Try again.");
-            throw err;
-          });
-        },
-
-        onApprove: function (data) {
-          return fetch("/paypal/capture-order", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ orderId: data.orderID })
-          })
-          .then(res => res.json())
-          .then(result => {
-            if (result?.error) throw new Error(result.error);
-
-            paypalPaidEl.value = "1";
-
-            const capId =
-              result?.capture?.purchase_units?.[0]?.payments?.captures?.[0]?.id ||
-              result?.purchase_units?.[0]?.payments?.captures?.[0]?.id ||
-              "";
-
-            paypalCaptureIdEl.value = capId;
-
-            checkoutForm.submit();
-          })
-          .catch(err => {
-            console.error(err);
-            paypalPaidEl.value = "0";
-            setPaypalError("PayPal payment failed or was cancelled. Try again.");
-          });
-        },
-
-        onCancel: function () {
-          paypalPaidEl.value = "0";
-          setPaypalError("PayPal was cancelled. No payment was made.");
-        },
-
-        onError: function (err) {
-          console.error(err);
-          paypalPaidEl.value = "0";
-          setPaypalError("PayPal error. Try again.");
-        }
-      }).render("#paypal-button-container");
-
-      paypalButtonRendered = true;
+        createOrder: function(){ const fee = Number(deliveryFeeInput?.value||0); return fetch('/paypal/create-order',{ method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ deliveryFee: fee.toFixed(2), items: __clientCartItems, subtotal: __clientCartSubtotal }) }).then(r=>r.json()).then(d=>{ if (!d?.id) throw new Error(d?.error||'No order id'); paypalOrderIdEl.value = d.id; return d.id; }); },
+        onApprove: function(data){ return fetch('/paypal/capture-order',{ method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ orderId: data.orderID }) }).then(r=>r.json()).then(res=>{ if (res?.error) throw new Error(res.error); paypalPaidEl.value='1'; paypalCaptureIdEl.value = (res?.capture?.purchase_units?.[0]?.payments?.captures?.[0]?.id||''); checkoutForm.submit(); }); },
+        onError: function(err){ console.error(err); setPaypalError('PayPal error.'); if (paypalPaidEl) paypalPaidEl.value='0'; }
+      }).render('#paypal-button-container'); paypalRendered = true;
     }
 
-    paymentRadios.forEach(r => r.addEventListener('change', () => {
-      const pay = selectedPayment();
-      const isPaypal = pay === 'paypal';
-      showPaypalWrap(isPaypal);
+    paymentRadios.forEach(r=>r.addEventListener('change', ()=>{ const sel = Array.from(paymentRadios).find(x=>x.checked); const isPaypal = sel && sel.value === 'paypal'; if (paypalWrap) paypalWrap.style.display = isPaypal ? 'block' : 'none'; if (isPaypal) { if (paypalPaidEl) paypalPaidEl.value='0'; maybeRenderPaypal(); } }));
 
-      if (isPaypal) {
-        paypalPaidEl.value = "0";
-        maybeRenderPaypal();
-      }
-    }));
-
-    checkoutForm.addEventListener('submit', (event) => {
-      const pay = selectedPayment();
-      if (pay === 'paypal' && paypalPaidEl.value !== "1") {
-        event.preventDefault();
-        event.stopPropagation();
-        setPaypalError("Please complete PayPal payment first.");
-        showPaypalWrap(true);
-        document.getElementById("paypal-button-container")?.scrollIntoView({ behavior: "smooth", block: "center" });
-      }
-    });
+    checkoutForm.addEventListener('submit', function(e){ const sel = Array.from(paymentRadios).find(x=>x.checked); const isPaypal = sel && sel.value === 'paypal'; if (isPaypal && paypalPaidEl && paypalPaidEl.value !== '1') { e.preventDefault(); e.stopPropagation(); setPaypalError('Please complete PayPal payment first.'); if (paypalWrap) paypalWrap.style.display='block'; document.getElementById('paypal-button-container')?.scrollIntoView({behavior:'smooth', block:'center'}); } });
   })();
 </script>
-=======
->>>>>>> d4f224f02d673e09c1aa0ab8bf0ae356b2acb59f
