@@ -1,4 +1,5 @@
 // app.js
+require('dotenv').config();
 const express = require("express");
 const path = require("path");
 const session = require("express-session");
@@ -169,6 +170,9 @@ app.get("/checkout", CheckoutController.renderCheckout);
 app.post("/checkout", CheckoutController.processCheckout);
 app.get("/order/:orderNumber", CheckoutController.renderReceipt);
 
+// ✅ PayPal (REST example style)
+app.post("/paypal/create-order", CheckoutController.createPaypalOrder);
+app.post("/paypal/capture-order", CheckoutController.capturePaypalOrder);
 // Admin
 app.get("/admin/orders", requireLogin, requireAdmin, AdminController.ordersDashboard);
 app.get(
