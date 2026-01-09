@@ -1,9 +1,12 @@
-// controllers/CheckoutController.js (session-based, no DB)
+// controllers/CheckoutController.js
+// Session-based checkout (no DB dependency required for PayPal render)
+
 const Order = require("../models/order");
 const UserCart = require("../models/userCart");
 const paypal = require("./services/paypal");
 
 exports.renderCheckout = (req, res) => {
+<<<<<<< HEAD
   const items = res.locals.cartDetailed || [];
   const subtotal = items.reduce((sum, i) => sum + (i.subtotal || 0), 0);
 
@@ -91,8 +94,26 @@ exports.capturePaypalOrder = async (req, res) => {
   }
 };
 
+=======
+  const cart = req.session.cart || {};
+  const items = res.locals.cartDetailed || [];
+  const subtotal = items.reduce((sum, i) => sum + (i.subtotal || 0), 0);
+
+  res.render("checkout", {
+    items,
+    subtotal,
+    total: subtotal, // delivery fee added on client side
+    user: req.session.user || null,
+
+    // 🔑 THIS is what fixes your error
+    PAYPAL_CLIENT_ID: process.env.PAYPAL_CLIENT_ID,
+  });
+};
+
+>>>>>>> d4f224f02d673e09c1aa0ab8bf0ae356b2acb59f
 exports.processCheckout = (req, res) => {
   const items = res.locals.cartDetailed || [];
+
   if (!items.length) {
     req.flash("error", "Your cart is empty.");
     return res.redirect("/cart");
@@ -101,10 +122,16 @@ exports.processCheckout = (req, res) => {
   const deliveryMethod = req.body.deliveryMethod || "standard";
   const deliveryFee = parseFloat(req.body.deliveryFee || 0);
 
+<<<<<<< HEAD
   // Normalize and validate shipping phone for non-pickup deliveries
   const rawPhone = (req.body.shippingPhone || "").toString();
   const digitsOnly = rawPhone.replace(/\D/g, "");
 
+=======
+  // Phone validation (SG standard)
+  const rawPhone = (req.body.shippingPhone || "").toString();
+  const digitsOnly = rawPhone.replace(/\D/g, "");
+>>>>>>> d4f224f02d673e09c1aa0ab8bf0ae356b2acb59f
   if (deliveryMethod !== "pickup") {
     const last8 = digitsOnly.slice(-8);
     if (!/^\d{8}$/.test(last8)) {
@@ -117,6 +144,7 @@ exports.processCheckout = (req, res) => {
   const subtotal = items.reduce((sum, i) => sum + (i.subtotal || 0), 0);
   const total = subtotal + deliveryFee;
 
+<<<<<<< HEAD
   // ✅ PayPal verification gate:
   // If user chose paypal, they must have a COMPLETED capture stored in session
   let paid = true;
@@ -152,21 +180,36 @@ exports.processCheckout = (req, res) => {
     };
   }
 
+=======
+>>>>>>> d4f224f02d673e09c1aa0ab8bf0ae356b2acb59f
   const orderNumber = `ORD-${Date.now()}-${Math.floor(Math.random() * 900 + 100)}`;
 
   const orderPayload = {
     orderNumber,
-    userId: req.session.user ? req.session.user.id : null,
+    userId: req.session.user?.id || null,
     subtotal,
     deliveryFee,
     total,
     deliveryMethod,
     paymentMethod,
+<<<<<<< HEAD
     shippingPhone: digitsOnly ? digitsOnly.slice(-8) : null,
     customerName: req.body.shippingName || (req.session.user && req.session.user.username) || null,
     customerEmail: (req.session.user && req.session.user.email) || (req.body.customerEmail || null),
     customerPhone: digitsOnly ? digitsOnly.slice(-8) : null,
     paid,
+=======
+    customerName:
+      req.body.shippingName ||
+      req.session.user?.username ||
+      null,
+    customerEmail:
+      req.session.user?.email ||
+      req.body.customerEmail ||
+      null,
+    customerPhone: digitsOnly ? digitsOnly.slice(-8) : null,
+    paid: true,
+>>>>>>> d4f224f02d673e09c1aa0ab8bf0ae356b2acb59f
     createdAt: new Date().toISOString(),
     items,
     ...(paypalMeta ? paypalMeta : {}),
@@ -174,8 +217,8 @@ exports.processCheckout = (req, res) => {
 
   Order.createOrder(orderPayload, items, (err, orderId) => {
     if (err) {
-      console.error("Failed to persist order:", err);
-      req.flash("error", "Order placed but not saved to admin dashboard.");
+      console.error("Order save failed:", err);
+      req.flash("error", "Order placed but not saved.");
     } else {
       if (orderId) orderPayload.id = orderId;
       req.flash("success", "Order placed successfully!");
@@ -184,19 +227,15 @@ exports.processCheckout = (req, res) => {
     req.session.lastOrder = orderPayload;
     req.session.cart = {};
 
+<<<<<<< HEAD
     // Clear PayPal session proof after use (important)
     req.session.paypalCapture = null;
     req.session.paypalPending = null;
 
+=======
+>>>>>>> d4f224f02d673e09c1aa0ab8bf0ae356b2acb59f
     if (req.session.user?.id) {
-      UserCart.clearCart(req.session.user.id, (clearErr) => {
-        if (clearErr) {
-          console.error(
-            `Failed to clear persisted cart for user ${req.session.user.id} after checkout:`,
-            clearErr
-          );
-        }
-      });
+      UserCart.clearCart(req.session.user.id, () => {});
     }
 
     res.redirect(`/order/${orderNumber}`);
@@ -204,17 +243,17 @@ exports.processCheckout = (req, res) => {
 };
 
 exports.renderReceipt = (req, res) => {
-  const orderNumber = req.params.orderNumber;
-  const stored = req.session.lastOrder;
+  const { orderNumber } = req.params;
+  const order = req.session.lastOrder;
 
-  if (!stored || stored.orderNumber !== orderNumber) {
-    req.flash("error", "Order not found. Complete a checkout first.");
+  if (!order || order.orderNumber !== orderNumber) {
+    req.flash("error", "Order not found.");
     return res.redirect("/shopping");
   }
 
   res.render("receipt", {
-    order: stored,
-    items: stored.items || [],
+    order,
+    items: order.items || [],
     user: req.session.user || null,
   });
 };

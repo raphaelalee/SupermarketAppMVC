@@ -1,19 +1,26 @@
 // app.js
+<<<<<<< HEAD
 require('dotenv').config();
 const express = require("express");
+=======
+>>>>>>> d4f224f02d673e09c1aa0ab8bf0ae356b2acb59f
 const path = require("path");
+require("dotenv").config({ path: path.join(__dirname, ".env") });
+
+const express = require("express");
 const session = require("express-session");
-// Optional persistent session store backed by MySQL. Install with: npm install express-mysql-session
-let MySQLStore;
-if (process.env.USE_MYSQL_SESSION === 'true') {
-  try {
-    MySQLStore = require('express-mysql-session')(session);
-  } catch (e) {
-    console.warn('express-mysql-session not installed; falling back to memory session store.');
-  }
-}
 const flash = require("connect-flash");
 const methodOverride = require("method-override");
+
+// Optional MySQL session store
+let MySQLStore;
+if (process.env.USE_MYSQL_SESSION === "true") {
+  try {
+    MySQLStore = require("express-mysql-session")(session);
+  } catch (e) {
+    console.warn("express-mysql-session not installed; using memory store.");
+  }
+}
 
 const app = express();
 
@@ -26,7 +33,7 @@ const AdminController = require("./controllers/AdminController");
 
 // Logger
 app.use((req, res, next) => {
-  console.log(` ${req.method} ${req.url}`);
+  console.log(`${req.method} ${req.url}`);
   next();
 });
 
@@ -40,40 +47,45 @@ app.use(express.urlencoded({ extended: false }));
 app.use(express.json());
 app.use(methodOverride("_method"));
 
+// Session config
 const sessOptions = {
-  secret: process.env.SESSION_SECRET || 'secret',
+  secret: process.env.SESSION_SECRET || "secret",
   resave: false,
   saveUninitialized: false,
   cookie: {
-    maxAge: 1000 * 60 * 60 * 24, // 1 day
-    sameSite: 'lax',
-  }
+    maxAge: 1000 * 60 * 60 * 24,
+    sameSite: "lax",
+  },
 };
 
-// Use MySQL-backed session store when available and enabled via env
+// ✅ Use DB_NAME (your .env) but also accept DB_DATABASE if you switch later
+const DB_NAME = process.env.DB_NAME || process.env.DB_DATABASE;
+
 if (MySQLStore) {
-  const storeOptions = {
-    // Use the same connection settings as db.js via env vars
+  sessOptions.store = new MySQLStore({
     host: process.env.DB_HOST,
-    port: process.env.DB_PORT,
+    port: process.env.DB_PORT ? Number(process.env.DB_PORT) : 3306,
     user: process.env.DB_USER,
     password: process.env.DB_PASSWORD,
-    database: process.env.DB_NAME,
-  };
-  sessOptions.store = new MySQLStore(storeOptions);
+    database: DB_NAME,
+  });
 }
 
 app.use(session(sessOptions));
 app.use(flash());
 
-// Global variables
+// Global locals
 app.use((req, res, next) => {
   res.locals.user = req.session.user || null;
   res.locals.messages = req.flash("success") || [];
   res.locals.errors = req.flash("error") || [];
+
+  res.locals.PAYPAL_CLIENT_ID = process.env.PAYPAL_CLIENT_ID;
+
   next();
 });
 
+// Cart count for navbar
 app.use((req, res, next) => {
   const cartObj = req.session.cart || {};
   res.locals.cartCount = Object.values(cartObj).reduce((count, entry) => {
@@ -85,9 +97,30 @@ app.use((req, res, next) => {
   next();
 });
 
-// Simple auth guard for protected pages
+// Build detailed cart snapshot
+app.use((req, res, next) => {
+  const cart = req.session.cart || {};
+  const ids = Object.keys(cart);
+
+  res.locals.cartDetailed = [];
+  res.locals.cartTotal = 0;
+  res.locals.cartSummary = { items: [], total: 0, count: 0 };
+
+  if (!ids.length) return next();
+
+  CartController.buildCartSnapshot(cart, (err, summary) => {
+    if (!err && summary) {
+      res.locals.cartDetailed = summary.items;
+      res.locals.cartTotal = summary.total;
+      res.locals.cartSummary = summary;
+    }
+    next();
+  });
+});
+
+// Auth guards
 const requireLogin = (req, res, next) => {
-  if (req.session && req.session.user) return next();
+  if (req.session?.user) return next();
   req.flash("error", "Please log in to continue.");
   req.session.returnTo = req.originalUrl;
   return res.redirect("/login");
@@ -100,36 +133,12 @@ const requireAdmin = (req, res, next) => {
   return res.redirect("/login");
 };
 
-app.use((req, res, next) => {
-  const cart = req.session.cart || {};
-  const ids = Object.keys(cart);
-
-  res.locals.cartDetailed = [];
-  res.locals.cartTotal = 0;
-  res.locals.cartSummary = { items: [], total: 0, count: 0 };
-
-  if (ids.length === 0) return next();
-
-  CartController.buildCartSnapshot(cart, (err, summary) => {
-    if (!err && summary) {
-      res.locals.cartDetailed = summary.items;
-      res.locals.cartTotal = summary.total;
-      res.locals.cartSummary = summary;
-    }
-    next();
-  });
-});
-
 // Routes
-
-// Home
 app.get("/", SupermarketController.homePage);
 
-// Shopping
 app.get("/shopping", SupermarketController.listAll);
 app.get("/product/:id", SupermarketController.viewProduct);
 
-// Inventory (Admin)
 app.get("/inventory", SupermarketController.inventoryPage);
 app.post(
   "/inventory/add",
@@ -142,21 +151,22 @@ app.post(
   SupermarketController.updateProduct
 );
 app.post("/inventory/delete/:id", SupermarketController.deleteProduct);
-app.post("/inventory/replenish/:id", requireLogin, requireAdmin, SupermarketController.replenishStock);
+app.post(
+  "/inventory/replenish/:id",
+  requireLogin,
+  requireAdmin,
+  SupermarketController.replenishStock
+);
 
-// Auth
 app.get("/login", UserController.renderLogin);
 app.post("/login", UserController.loginUser);
 app.get("/register", UserController.renderRegister);
 app.post("/register", UserController.registerUser);
 app.get("/logout", UserController.logoutUser);
-// (forgot/reset password routes removed)
 
-// User orders (purchase history)
-app.get('/history', requireLogin, UserController.myOrders);
-app.get('/history/:id', requireLogin, UserController.viewMyOrder);
+app.get("/history", requireLogin, UserController.myOrders);
+app.get("/history/:id", requireLogin, UserController.viewMyOrder);
 
-// Cart
 app.post("/add-to-cart/:id", CartController.addToCart);
 app.get("/cart", CartController.viewCart);
 app.post("/cart/remove/:id", CartController.removeFromCart);
@@ -165,42 +175,30 @@ app.post("/cart/increase/:id", CartController.increaseQuantity);
 app.post("/cart/decrease/:id", CartController.decreaseQuantity);
 app.post("/cart/clear", CartController.clearCart);
 
-// Checkout (allow guest checkout and receipt viewing)
 app.get("/checkout", CheckoutController.renderCheckout);
 app.post("/checkout", CheckoutController.processCheckout);
 app.get("/order/:orderNumber", CheckoutController.renderReceipt);
 
+<<<<<<< HEAD
 // ✅ PayPal (REST example style)
 app.post("/paypal/create-order", CheckoutController.createPaypalOrder);
 app.post("/paypal/capture-order", CheckoutController.capturePaypalOrder);
 // Admin
+=======
+>>>>>>> d4f224f02d673e09c1aa0ab8bf0ae356b2acb59f
 app.get("/admin/orders", requireLogin, requireAdmin, AdminController.ordersDashboard);
-app.get(
-  "/admin/orders/:id",
-  requireLogin,
-  requireAdmin,
-  AdminController.viewOrder
-);
-app.post(
-  "/admin/orders/:id/status",
-  requireLogin,
-  requireAdmin,
-  AdminController.updateOrderStatus
-);
-app.get(
-  "/admin/orders/:id/receipt",
-  requireLogin,
-  requireAdmin,
-  AdminController.downloadReceipt
-);
+app.get("/admin/orders/:id", requireLogin, requireAdmin, AdminController.viewOrder);
+app.post("/admin/orders/:id/status", requireLogin, requireAdmin, AdminController.updateOrderStatus);
+app.get("/admin/orders/:id/receipt", requireLogin, requireAdmin, AdminController.downloadReceipt);
 
-// Pages
 app.get("/about", (req, res) => res.render("about"));
 app.get("/contact", (req, res) => res.render("contact"));
 app.get("/help-center", (req, res) => res.render("helpCenter"));
 
-// start server
+// Start server
 const PORT = 3000;
-app.listen(PORT, () =>
-  console.log(`Server running at http://localhost:${PORT}`)
-);
+app.listen(PORT, () => {
+  console.log(`Server running at http://localhost:${PORT}`);
+  console.log("Using DB:", DB_NAME);
+  console.log("PAYPAL_CLIENT_ID:", process.env.PAYPAL_CLIENT_ID ? "[set]" : "[missing]");
+});
