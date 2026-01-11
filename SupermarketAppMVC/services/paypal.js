@@ -72,6 +72,13 @@ async function createOrder(amount, options = {}) {
     ],
   };
 
+  // Optionally include shipping name so the PayPal approval screen shows recipient
+  if (options.shippingName) {
+    payload.purchase_units[0].shipping = {
+      name: { full_name: String(options.shippingName) },
+    };
+  }
+
   // Optional helpful metadata
   if (options.invoiceId) payload.purchase_units[0].invoice_id = String(options.invoiceId);
   if (options.description) payload.purchase_units[0].description = String(options.description);

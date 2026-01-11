@@ -29,6 +29,7 @@ exports.renderCheckout = (req, res) => {
  */
 exports.createPaypalOrder = async (req, res) => {
 	try {
+		console.log('createPaypalOrder: incoming request', { url: req.originalUrl, ip: req.ip });
 		// Prefer server-side cart snapshot (session), but accept client-provided
 		// items/subtotal when the request originates from PayPal UI where the
 		// cookie may not be sent.
@@ -53,13 +54,17 @@ exports.createPaypalOrder = async (req, res) => {
 
 		const total = subtotal + deliveryFee;
 
-		const order = await paypal.createOrder(total);
+		// Use shipping name if provided so PayPal approval screen shows recipient
+		const shippingName = req.body.shippingName || (req.session.user && req.session.user.username) || null;
+
+		const order = await paypal.createOrder(total, { shippingName });
 
 		// Store the expected total in session to validate later (if session exists)
 		if (req.session) {
 			req.session.paypalPending = {
 				orderId: order.id,
 				total: Number(total.toFixed(2)),
+				shippingName: shippingName || null,
 				createdAt: Date.now(),
 			};
 		}
@@ -77,6 +82,7 @@ exports.createPaypalOrder = async (req, res) => {
  */
 exports.capturePaypalOrder = async (req, res) => {
 	try {
+		console.log('capturePaypalOrder: incoming request', { url: req.originalUrl, ip: req.ip, body: req.body });
 		const { orderId } = req.body;
 		if (!orderId) return res.status(400).json({ error: "Missing orderId" });
 

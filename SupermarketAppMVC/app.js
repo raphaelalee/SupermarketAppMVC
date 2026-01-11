@@ -25,6 +25,7 @@ const UserController = require("./controllers/UserController");
 const CartController = require("./controllers/CartController");
 const CheckoutController = require("./controllers/CheckoutController");
 const AdminController = require("./controllers/AdminController");
+const WalletController = require("./controllers/WalletController");
 
 // Logger
 app.use((req, res, next) => {
@@ -177,6 +178,7 @@ app.get("/order/:orderNumber", CheckoutController.renderReceipt);
 // ✅ PayPal (REST example style)
 app.post("/paypal/create-order", CheckoutController.createPaypalOrder);
 app.post("/paypal/capture-order", CheckoutController.capturePaypalOrder);
+app.get('/wallet', WalletController.walletPage);
 // Customer-confirm payment for offline methods (PayNow / Bank / COD)
 app.post('/order/confirm-payment', CheckoutController.confirmPayment);
 // Admin

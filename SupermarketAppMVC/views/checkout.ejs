@@ -51,7 +51,7 @@
             <div class="aml-note mt-3"><div class="shield">✓</div><div><strong class="d-block">Secure & AML checks</strong><small class="text-muted">We perform AML and identity verification for high-value orders. Payments are encrypted and PCI-DSS compliant.</small></div></div>
 
             <div class="row g-3 mt-2" id="delivery-fields">
-              <div class="col-12"><label class="form-label small text-muted">Recipient name</label><input type="text" class="form-control" name="shippingName" placeholder="Full name for delivery" required></div>
+              <div class="col-12"><label class="form-label small text-muted">Recipient name</label><input type="text" class="form-control" name="shippingName" placeholder="Full name for delivery" value="<%= user ? user.username : '' %>" required></div>
               <div class="col-12"><label class="form-label small text-muted">Contact number</label><input type="tel" class="form-control" name="shippingPhone" id="shippingPhone" placeholder="+65 81234567" pattern="^(\+65\s?)?\d{8}$" required><div class="invalid-feedback">Enter an 8-digit Singapore number (optionally prefixed with +65).</div></div>
               <div class="col-12"><label class="form-label small text-muted">Delivery address</label><textarea class="form-control" name="shippingAddress" rows="3" placeholder="Block / Unit / Postal code" required></textarea><div class="invalid-feedback" id="addr-feedback">Please put unit number and full address</div></div>
             </div>
@@ -162,7 +162,7 @@
     function maybeRenderPaypal(){
       if (paypalRendered) return; if (typeof paypal === 'undefined' || !paypal?.Buttons) { setPaypalError('PayPal SDK failed to load.'); return; }
       paypal.Buttons({
-        createOrder: function(){ const fee = Number(deliveryFeeInput?.value||0); return fetch('/paypal/create-order',{ method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ deliveryFee: fee.toFixed(2), items: __clientCartItems, subtotal: __clientCartSubtotal }) }).then(r=>r.json()).then(d=>{ if (!d?.id) throw new Error(d?.error||'No order id'); paypalOrderIdEl.value = d.id; return d.id; }); },
+      createOrder: function(){ const fee = Number(deliveryFeeInput?.value||0); const shipName = (document.querySelector('input[name="shippingName"]') && document.querySelector('input[name="shippingName"]').value) || ''; return fetch('/paypal/create-order',{ method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ deliveryFee: fee.toFixed(2), items: __clientCartItems, subtotal: __clientCartSubtotal, shippingName: shipName }) }).then(r=>r.json()).then(d=>{ if (!d?.id) throw new Error(d?.error||'No order id'); paypalOrderIdEl.value = d.id; return d.id; }); },
         onApprove: function(data){ return fetch('/paypal/capture-order',{ method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ orderId: data.orderID }) }).then(r=>r.json()).then(res=>{ if (res?.error) throw new Error(res.error); paypalPaidEl.value='1'; paypalCaptureIdEl.value = (res?.capture?.purchase_units?.[0]?.payments?.captures?.[0]?.id||''); checkoutForm.submit(); }); },
         onError: function(err){ console.error(err); setPaypalError('PayPal error.'); if (paypalPaidEl) paypalPaidEl.value='0'; }
       }).render('#paypal-button-container'); paypalRendered = true;
