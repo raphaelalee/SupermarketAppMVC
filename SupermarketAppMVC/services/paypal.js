@@ -35,6 +35,7 @@ async function getAccessToken() {
 
   const data = await response.json();
   if (!response.ok) {
+    console.error('PayPal getAccessToken failed', { status: response.status, body: data });
     throw new Error(`PayPal getAccessToken failed: ${JSON.stringify(data)}`);
   }
 
@@ -94,6 +95,7 @@ async function createOrder(amount, options = {}) {
 
   const data = await response.json();
   if (!response.ok) {
+    console.error('PayPal createOrder failed', { status: response.status, body: data, payload });
     throw new Error(`PayPal createOrder failed: ${JSON.stringify(data)}`);
   }
 
@@ -115,6 +117,7 @@ async function captureOrder(orderId) {
 
   const data = await response.json();
   if (!response.ok) {
+    console.error('PayPal captureOrder failed', { status: response.status, body: data, orderId });
     throw new Error(`PayPal captureOrder failed: ${JSON.stringify(data)}`);
   }
 

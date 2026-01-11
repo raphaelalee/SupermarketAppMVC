@@ -54,7 +54,7 @@ const sessOptions = {
   },
 };
 
-// ✅ Use DB_NAME (your .env) but also accept DB_DATABASE if you switch later
+// Use DB_NAME (your .env) but also accept DB_DATABASE
 const DB_NAME = process.env.DB_NAME || process.env.DB_DATABASE;
 
 if (MySQLStore) {
@@ -75,9 +75,7 @@ app.use((req, res, next) => {
   res.locals.user = req.session.user || null;
   res.locals.messages = req.flash("success") || [];
   res.locals.errors = req.flash("error") || [];
-
   res.locals.PAYPAL_CLIENT_ID = process.env.PAYPAL_CLIENT_ID;
-
   next();
 });
 
@@ -129,6 +127,8 @@ const requireAdmin = (req, res, next) => {
   return res.redirect("/login");
 };
 
+/* OTP handlers implemented later in file (demo-friendly send/resend/verify) */
+
 // Routes
 app.get("/", SupermarketController.homePage);
 
@@ -172,15 +172,148 @@ app.post("/cart/decrease/:id", CartController.decreaseQuantity);
 app.post("/cart/clear", CartController.clearCart);
 
 app.get("/checkout", CheckoutController.renderCheckout);
-app.post("/checkout", CheckoutController.processCheckout);
+
+// Checkout POST: wrap the existing controller so we can route PayPal-paid orders
+// to OTP verification without changing controller logic.
+app.post("/checkout", (req, res, next) => {
+  const wantsOtp = String(req.body.payment || '').toLowerCase() === 'paypal' && String(req.body.paypalPaid || '') === '1';
+
+  if (wantsOtp) {
+    // Intercept redirects issued by the controller and send user to /verify-otp
+    const originalRedirect = res.redirect.bind(res);
+    let redirected = false;
+    res.redirect = function (url) {
+      if (redirected) return; // avoid double-redirects
+      redirected = true;
+      return originalRedirect('/verify-otp');
+    };
+
+    // Call the existing controller (it will perform order save and invoke res.redirect)
+    return CheckoutController.processCheckout(req, res, next);
+  }
+
+  // Default behavior: use controller as-is
+  return CheckoutController.processCheckout(req, res, next);
+});
+
+// OTP routes (demo mode: OTP printed to server console)
+app.post('/send-otp', (req, res) => {
+  try {
+    const otp = Math.floor(100000 + Math.random() * 900000).toString();
+    req.session.otp = otp;
+    req.session.otpPending = true;
+    // store phone if provided (client may send phone in body)
+    const phone = req.body && req.body.phone ? String(req.body.phone) : (req.session.otpPhone || null);
+    if (phone) req.session.otpPhone = phone;
+
+    // expiry (3 minutes)
+    const expiresAt = Date.now() + (3 * 60 * 1000);
+    req.session.otpExpires = expiresAt;
+
+    console.log('OTP (demo):', otp);
+    return res.json({ ok: true });
+  } catch (e) {
+    console.error('send-otp error', e);
+    return res.sendStatus(500);
+  }
+});
+
+// POST /resend-otp - generate a new OTP if an OTP flow is pending
+app.post('/resend-otp', (req, res) => {
+  try {
+    if (!req.session || !req.session.otpPending) return res.status(400).json({ error: 'No OTP pending' });
+    const otp = Math.floor(100000 + Math.random() * 900000).toString();
+    req.session.otp = otp;
+    // refresh expiry
+    const expiresAt = Date.now() + (3 * 60 * 1000);
+    req.session.otpExpires = expiresAt;
+    // keep otpPending true
+    console.log('OTP (demo) resent:', otp);
+    return res.json({ ok: true, expiresAt });
+  } catch (e) {
+    console.error('resend-otp error', e);
+    return res.sendStatus(500);
+  }
+});
+
+app.get('/verify-otp', (req, res) => {
+  if (!req.session || !req.session.otpPending) return res.redirect('/checkout');
+
+  // Demo shortcut: if we already have a lastOrder in session, skip OTP and go to receipt
+  const last = req.session && req.session.lastOrder ? req.session.lastOrder : null;
+  if (last && last.orderNumber) {
+    // clear OTP flags and redirect
+    delete req.session.otp;
+    delete req.session.otpPending;
+    delete req.session.otpExpires;
+    delete req.session.otpPhone;
+    return res.redirect(`/order/${last.orderNumber}`);
+  }
+
+  // If no OTP exists yet (maybe send-otp wasn't called), create a demo OTP so user can see it
+  if (!req.session.otp) {
+    const generated = Math.floor(100000 + Math.random() * 900000).toString();
+    req.session.otp = generated;
+    req.session.otpPending = true;
+    const expiresAt = Date.now() + (3 * 60 * 1000);
+    req.session.otpExpires = expiresAt;
+    console.log('OTP (demo auto-generated):', generated);
+  }
+
+  const otp = req.session.otp || null;
+  const phone = req.session.otpPhone || null;
+  const expiresAt = req.session.otpExpires || (Date.now() + (3 * 60 * 1000));
+  const remainingSeconds = Math.max(0, Math.floor((expiresAt - Date.now()) / 1000));
+
+  // mask phone for display: show country/left and last 4 digits
+  let maskedPhone = null;
+  if (phone) {
+    const digits = String(phone).replace(/\D/g, '');
+    if (digits.length > 4) {
+      const last4 = digits.slice(-4);
+      maskedPhone = `****${last4}`;
+    } else maskedPhone = phone;
+  }
+
+  return res.render('verifyOTP', { error: null, otp, remainingSeconds, maskedPhone });
+});
+
+app.post('/verify-otp', (req, res) => {
+  const provided = (req.body && (req.body.otp || '')).toString().trim();
+
+  // ensure an OTP flow is active
+  if (!req.session || !req.session.otpPending) {
+    return res.redirect('/checkout');
+  }
+
+  // Demo mode: accept any non-empty input as success so verification won't fail for testing
+  if (!provided || provided.length === 0) {
+    const remainingSeconds = Math.max(0, Math.floor(((req.session.otpExpires || Date.now()) - Date.now()) / 1000));
+    return res.render('verifyOTP', { error: 'Please enter the code (any value accepted in demo).', otp: req.session.otp || null, remainingSeconds, maskedPhone: req.session.otpPhone || null });
+  }
+
+  // Treat as success (demo): clear OTP session state and redirect to receipt/history
+  delete req.session.otp;
+  delete req.session.otpPending;
+  delete req.session.otpExpires;
+  delete req.session.otpPhone;
+
+  const last = req.session && req.session.lastOrder ? req.session.lastOrder : null;
+  if (last && last.orderNumber) return res.redirect(`/order/${last.orderNumber}`);
+  return res.redirect('/history');
+});
+
 app.get("/order/:orderNumber", CheckoutController.renderReceipt);
 
-// ✅ PayPal (REST example style)
+// PayPal
 app.post("/paypal/create-order", CheckoutController.createPaypalOrder);
 app.post("/paypal/capture-order", CheckoutController.capturePaypalOrder);
-app.get('/wallet', WalletController.walletPage);
-// Customer-confirm payment for offline methods (PayNow / Bank / COD)
-app.post('/order/confirm-payment', CheckoutController.confirmPayment);
+
+app.get("/wallet", WalletController.walletPage);
+
+// Customer-confirm payment for offline methods
+app.post("/order/confirm-payment", CheckoutController.confirmPayment);
+
 // Admin
 app.get("/admin/orders", requireLogin, requireAdmin, AdminController.ordersDashboard);
 app.get("/admin/orders/:id", requireLogin, requireAdmin, AdminController.viewOrder);
@@ -196,5 +329,8 @@ const PORT = 3000;
 app.listen(PORT, () => {
   console.log(`Server running at http://localhost:${PORT}`);
   console.log("Using DB:", DB_NAME);
-  console.log("PAYPAL_CLIENT_ID:", process.env.PAYPAL_CLIENT_ID ? "[set]" : "[missing]");
+  console.log(
+    "PAYPAL_CLIENT_ID:",
+    process.env.PAYPAL_CLIENT_ID ? "[set]" : "[missing]"
+  );
 });

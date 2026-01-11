@@ -13,9 +13,13 @@
         <form method="POST" action="/checkout" id="checkout-form" class="card border-0 shadow-sm p-4" novalidate>
           <input type="hidden" name="deliveryMethod" id="deliveryMethod" value="standard">
           <input type="hidden" name="deliveryFee" id="deliveryFee" value="3.50">
+
           <input type="hidden" name="paypalOrderId" id="paypalOrderId" value="">
           <input type="hidden" name="paypalCaptureId" id="paypalCaptureId" value="">
           <input type="hidden" name="paypalPaid" id="paypalPaid" value="0">
+
+          <!-- ✅ NEW: OTP required flag for Option 2 -->
+          <input type="hidden" name="otpRequired" id="otpRequired" value="0">
 
           <section class="mb-4">
             <div class="d-flex justify-content-between align-items-center mb-2">
@@ -28,73 +32,151 @@
               <div class="col-12">
                 <label class="checkout-option d-flex align-items-center">
                   <input type="radio" name="delivery" value="standard" data-fee="3.50" checked>
-                  <div class="checkout-option-body"><strong>Standard Delivery</strong><span class="text-muted small">2-3 days</span></div>
+                  <div class="checkout-option-body">
+                    <strong>Standard Delivery</strong>
+                    <span class="text-muted small">2-3 days</span>
+                  </div>
                   <span class="price-tag">$3.50</span>
                 </label>
               </div>
               <div class="col-12">
                 <label class="checkout-option d-flex align-items-center">
                   <input type="radio" name="delivery" value="express" data-fee="6.00">
-                  <div class="checkout-option-body"><strong>Express Delivery</strong><span class="text-muted small">Same day</span></div>
+                  <div class="checkout-option-body">
+                    <strong>Express Delivery</strong>
+                    <span class="text-muted small">Same day</span>
+                  </div>
                   <span class="price-tag">$6.00</span>
                 </label>
               </div>
               <div class="col-12">
                 <label class="checkout-option d-flex align-items-center">
                   <input type="radio" name="delivery" value="pickup" data-fee="0">
-                  <div class="checkout-option-body"><strong>Store Pickup</strong><span class="text-muted small">Collect today • Free</span></div>
+                  <div class="checkout-option-body">
+                    <strong>Store Pickup</strong>
+                    <span class="text-muted small">Collect today • Free</span>
+                  </div>
                   <span class="price-tag">$0.00</span>
                 </label>
               </div>
             </div>
 
-            <div class="aml-note mt-3"><div class="shield">✓</div><div><strong class="d-block">Secure & AML checks</strong><small class="text-muted">We perform AML and identity verification for high-value orders. Payments are encrypted and PCI-DSS compliant.</small></div></div>
+            <div class="aml-note mt-3">
+              <div class="shield">✓</div>
+              <div>
+                <strong class="d-block">Secure & AML checks</strong>
+                <small class="text-muted">We perform AML and identity verification for high-value orders. Payments are encrypted and PCI-DSS compliant.</small>
+              </div>
+            </div>
 
             <div class="row g-3 mt-2" id="delivery-fields">
-              <div class="col-12"><label class="form-label small text-muted">Recipient name</label><input type="text" class="form-control" name="shippingName" placeholder="Full name for delivery" value="<%= user ? user.username : '' %>" required></div>
-              <div class="col-12"><label class="form-label small text-muted">Contact number</label><input type="tel" class="form-control" name="shippingPhone" id="shippingPhone" placeholder="+65 81234567" pattern="^(\+65\s?)?\d{8}$" required><div class="invalid-feedback">Enter an 8-digit Singapore number (optionally prefixed with +65).</div></div>
-              <div class="col-12"><label class="form-label small text-muted">Delivery address</label><textarea class="form-control" name="shippingAddress" rows="3" placeholder="Block / Unit / Postal code" required></textarea><div class="invalid-feedback" id="addr-feedback">Please put unit number and full address</div></div>
+              <div class="col-12">
+                <label class="form-label small text-muted">Recipient name</label>
+                <input type="text" class="form-control" name="shippingName" placeholder="Full name for delivery"
+                  value="<%= user ? user.username : '' %>" required>
+              </div>
+
+              <div class="col-12">
+                <label class="form-label small text-muted">Contact number</label>
+                <input type="tel" class="form-control" name="shippingPhone" id="shippingPhone"
+                  placeholder="+65 81234567" pattern="^(\+65\s?)?\d{8}$" required>
+                <div class="invalid-feedback">Enter an 8-digit Singapore number (optionally prefixed with +65).</div>
+              </div>
+
+              <div class="col-12">
+                <label class="form-label small text-muted">Delivery address</label>
+                <textarea class="form-control" name="shippingAddress" rows="3" placeholder="Block / Unit / Postal code" required></textarea>
+                <div class="invalid-feedback" id="addr-feedback">Please put unit number and full address</div>
+              </div>
             </div>
           </section>
 
           <section class="mb-4">
-            <div class="d-flex justify-content-between align-items-center mb-2"><h4 class="mb-0 fw-semibold">Payment method</h4><span class="badge bg-success-subtle text-success">Step 2 of 2</span></div>
+            <div class="d-flex justify-content-between align-items-center mb-2">
+              <h4 class="mb-0 fw-semibold">Payment method</h4>
+              <span class="badge bg-success-subtle text-success">Step 2 of 2</span>
+            </div>
             <p class="text-muted small mb-3">Pick how you’d like to pay.</p>
-            <div class="row g-3"><div class="col-12">
-              <label class="d-flex align-items-center mb-2"><input type="radio" name="payment" value="card" checked><div class="ms-2">Card (placeholder)</div></label>
-              <label class="d-flex align-items-center mb-2"><input type="radio" name="payment" value="paypal"><div class="ms-2">PayPal</div></label>
-              <label class="d-flex align-items-center mb-2"><input type="radio" name="payment" value="paynow"><div class="ms-2">PayNow (QR)</div></label>
-              <label class="d-flex align-items-center mb-2"><input type="radio" name="payment" value="bank"><div class="ms-2">Bank Transfer</div></label>
-              <label class="d-flex align-items-center mb-2"><input type="radio" name="payment" value="cod"><div class="ms-2">Cash on Delivery</div></label>
-              <div id="paypal-wrap" style="display:none; margin-top:10px;"><div id="paypal-error" style="display:none;color:#b00020;margin-bottom:8px"></div><div id="paypal-button-container"></div></div>
-            </div></div>
+
+            <div class="row g-3">
+              <div class="col-12">
+                <label class="d-flex align-items-center mb-2">
+                  <input type="radio" name="payment" value="card" checked>
+                  <div class="ms-2">Card (placeholder)</div>
+                </label>
+
+                <label class="d-flex align-items-center mb-2">
+                  <input type="radio" name="payment" value="paypal">
+                  <div class="ms-2">PayPal</div>
+                </label>
+
+                <label class="d-flex align-items-center mb-2">
+                  <input type="radio" name="payment" value="paynow">
+                  <div class="ms-2">PayNow (QR)</div>
+                </label>
+
+                <label class="d-flex align-items-center mb-2">
+                  <input type="radio" name="payment" value="bank">
+                  <div class="ms-2">Bank Transfer</div>
+                </label>
+
+                <label class="d-flex align-items-center mb-2">
+                  <input type="radio" name="payment" value="cod">
+                  <div class="ms-2">Cash on Delivery</div>
+                </label>
+
+                <div id="paypal-wrap" style="display:none; margin-top:10px;">
+                  <div id="paypal-error" style="display:none;color:#b00020;margin-bottom:8px"></div>
+                  <div id="paypal-button-container"></div>
+                </div>
+              </div>
+            </div>
 
             <div class="mt-3">
               <button type="submit" id="complete-order-btn" class="btn btn-primary btn-lg w-100">Complete Order</button>
             </div>
           </section>
-
         </form>
       </div>
 
       <aside class="col-lg-5">
         <div class="card border-0 shadow-sm p-4 mb-3">
           <h6 class="fw-semibold mb-3">Order summary</h6>
-          <div class="table-responsive"><table class="table table-borderless small mb-0"><tbody>
-            <% if (items && items.length) { %>
-              <% items.forEach(function(it){ %>
-                <% var _name = it.name || it.title || 'Item'; var _qty = Number(it.qty || it.quantity || 1) || 1; var _price = Number(it.price || 0); var _line = (typeof it.subtotal === 'number') ? Number(it.subtotal) : (_price * _qty); %>
-                <tr><td><%= _name %> x <%= _qty %></td><td class="text-end">S$ <%= (_line && !isNaN(_line) ? _line : 0).toFixed(2) %></td></tr>
-              <% }) %>
-            <% } else { %>
-              <tr><td colspan="2">Your cart is empty</td></tr>
-            <% } %>
-          </tbody></table></div>
+          <div class="table-responsive">
+            <table class="table table-borderless small mb-0">
+              <tbody>
+                <% if (items && items.length) { %>
+                  <% items.forEach(function(it){ %>
+                    <% var _name = it.name || it.title || 'Item';
+                       var _qty = Number(it.qty || it.quantity || 1) || 1;
+                       var _price = Number(it.price || 0);
+                       var _line = (typeof it.subtotal === 'number') ? Number(it.subtotal) : (_price * _qty); %>
+                    <tr>
+                      <td><%= _name %> x <%= _qty %></td>
+                      <td class="text-end">S$ <%= (_line && !isNaN(_line) ? _line : 0).toFixed(2) %></td>
+                    </tr>
+                  <% }) %>
+                <% } else { %>
+                  <tr><td colspan="2">Your cart is empty</td></tr>
+                <% } %>
+              </tbody>
+            </table>
+          </div>
 
-          <div class="summary-row mt-3"><span>Subtotal</span><strong id="summary-subtotal">S$ <%= Number(total || 0).toFixed(2) %></strong></div>
-          <div class="summary-row"><span>Delivery</span><strong id="summary-delivery">S$ 3.50*</strong></div>
-          <div class="summary-row total-row mt-2"><span>Amount due</span><strong id="summary-total">S$ <%= (Number(total || 0) + 3.5).toFixed(2) %></strong></div>
+          <div class="summary-row mt-3">
+            <span>Subtotal</span>
+            <strong id="summary-subtotal">S$ <%= Number(total || 0).toFixed(2) %></strong>
+          </div>
 
+          <div class="summary-row">
+            <span>Delivery</span>
+            <strong id="summary-delivery">S$ 3.50*</strong>
+          </div>
+
+          <div class="summary-row total-row mt-2">
+            <span>Amount due</span>
+            <strong id="summary-total">S$ <%= (Number(total || 0) + 3.5).toFixed(2) %></strong>
+          </div>
         </div>
       </aside>
     </div>
@@ -103,8 +185,9 @@
 
 <%- include('partials/footer') %>
 
-<!-- PayPal SDK and client script (single copy) -->
+<!-- PayPal SDK (single copy) -->
 <script src="https://www.paypal.com/sdk/js?client-id=<%= paypalClientId %>&currency=<%= paypalCurrency %>"></script>
+
 <script>
   (function(){
     const deliveryRadios = document.querySelectorAll('input[name="delivery"]');
@@ -112,64 +195,219 @@
     const summaryDelivery = document.getElementById('summary-delivery');
     const summaryTotal = document.getElementById('summary-total');
     const subtotal = <%= Number(total || 0).toFixed(2) %>;
+
     const paymentRadios = document.querySelectorAll('input[name="payment"]');
     const paypalWrap = document.getElementById('paypal-wrap');
     const paypalError = document.getElementById('paypal-error');
+
     const paypalOrderIdEl = document.getElementById('paypalOrderId');
     const paypalPaidEl = document.getElementById('paypalPaid');
     const paypalCaptureIdEl = document.getElementById('paypalCaptureId');
+    const otpRequiredEl = document.getElementById('otpRequired');
+
     const checkoutForm = document.getElementById('checkout-form');
 
     const __clientCartItems = <%- JSON.stringify(items || []) %>;
     const __clientCartSubtotal = <%= Number(total || 0).toFixed(2) %>;
 
     function formatMoney(v){ return 'S$ ' + Number(v).toFixed(2); }
+
     function updateDelivery(){
-      const sel = Array.from(deliveryRadios).find(r=>r.checked);
-      const fee = sel ? Number(sel.dataset.fee||0) : 0;
+      const sel = Array.from(deliveryRadios).find(r => r.checked);
+      const fee = sel ? Number(sel.dataset.fee || 0) : 0;
+
       deliveryFeeInput.value = fee.toFixed(2);
       summaryDelivery.textContent = formatMoney(fee) + '*';
-      summaryTotal.textContent = formatMoney(Number(subtotal)+fee);
+      summaryTotal.textContent = formatMoney(Number(subtotal) + fee);
 
-      // set hidden delivery method so server receives the correct choice
       const deliveryMethodInput = document.getElementById('deliveryMethod');
       if (deliveryMethodInput && sel) deliveryMethodInput.value = sel.value;
 
-      // toggle visibility and HTML5 required attributes for delivery fields
       const deliveryFieldsDiv = document.getElementById('delivery-fields');
       if (deliveryFieldsDiv) {
         if (sel && sel.value === 'pickup') {
           deliveryFieldsDiv.style.display = 'none';
           Array.from(deliveryFieldsDiv.querySelectorAll('input, textarea')).forEach(el=>{
-            // remember previous required state
             el.dataset._wasRequired = el.required ? '1' : '0';
             el.required = false;
           });
         } else {
           deliveryFieldsDiv.style.display = '';
           Array.from(deliveryFieldsDiv.querySelectorAll('input, textarea')).forEach(el=>{
-            // restore required if it was required before or is a core delivery field
-            if (el.dataset._wasRequired === '1' || ['shippingName','shippingPhone','shippingAddress'].includes(el.name)) el.required = true;
+            if (el.dataset._wasRequired === '1' || ['shippingName','shippingPhone','shippingAddress'].includes(el.name)) {
+              el.required = true;
+            }
           });
         }
       }
     }
-    deliveryRadios.forEach(r=>r.addEventListener('change', updateDelivery)); updateDelivery();
 
-    function setPaypalError(msg){ if (!paypalError) return; paypalError.textContent = msg; paypalError.style.display = 'block'; }
+    deliveryRadios.forEach(r => r.addEventListener('change', updateDelivery));
+    updateDelivery();
 
-    let paypalRendered = false;
-    function maybeRenderPaypal(){
-      if (paypalRendered) return; if (typeof paypal === 'undefined' || !paypal?.Buttons) { setPaypalError('PayPal SDK failed to load.'); return; }
-      paypal.Buttons({
-      createOrder: function(){ const fee = Number(deliveryFeeInput?.value||0); const shipName = (document.querySelector('input[name="shippingName"]') && document.querySelector('input[name="shippingName"]').value) || ''; return fetch('/paypal/create-order',{ method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ deliveryFee: fee.toFixed(2), items: __clientCartItems, subtotal: __clientCartSubtotal, shippingName: shipName }) }).then(r=>r.json()).then(d=>{ if (!d?.id) throw new Error(d?.error||'No order id'); paypalOrderIdEl.value = d.id; return d.id; }); },
-        onApprove: function(data){ return fetch('/paypal/capture-order',{ method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ orderId: data.orderID }) }).then(r=>r.json()).then(res=>{ if (res?.error) throw new Error(res.error); paypalPaidEl.value='1'; paypalCaptureIdEl.value = (res?.capture?.purchase_units?.[0]?.payments?.captures?.[0]?.id||''); checkoutForm.submit(); }); },
-        onError: function(err){ console.error(err); setPaypalError('PayPal error.'); if (paypalPaidEl) paypalPaidEl.value='0'; }
-      }).render('#paypal-button-container'); paypalRendered = true;
+    function setPaypalError(msg){
+      if (!paypalError) return;
+      paypalError.textContent = msg;
+      paypalError.style.display = 'block';
     }
 
-    paymentRadios.forEach(r=>r.addEventListener('change', ()=>{ const sel = Array.from(paymentRadios).find(x=>x.checked); const isPaypal = sel && sel.value === 'paypal'; if (paypalWrap) paypalWrap.style.display = isPaypal ? 'block' : 'none'; if (isPaypal) { if (paypalPaidEl) paypalPaidEl.value='0'; maybeRenderPaypal(); } }));
+    function clearPaypalError(){
+      if (!paypalError) return;
+      paypalError.textContent = '';
+      paypalError.style.display = 'none';
+    }
 
-    checkoutForm.addEventListener('submit', function(e){ const sel = Array.from(paymentRadios).find(x=>x.checked); const isPaypal = sel && sel.value === 'paypal'; if (isPaypal && paypalPaidEl && paypalPaidEl.value !== '1') { e.preventDefault(); e.stopPropagation(); setPaypalError('Please complete PayPal payment first.'); if (paypalWrap) paypalWrap.style.display='block'; document.getElementById('paypal-button-container')?.scrollIntoView({behavior:'smooth', block:'center'}); } });
+    let paypalRendered = false;
+    let isSubmitting = false;
+    let creatingOrder = false; // ✅ prevents double /paypal/create-order
+
+    function maybeRenderPaypal(){
+      if (paypalRendered) return;
+
+      if (typeof paypal === 'undefined' || !paypal?.Buttons) {
+        setPaypalError('PayPal SDK failed to load.');
+        return;
+      }
+
+      // ✅ Mark rendered BEFORE render to avoid double-render race
+      paypalRendered = true;
+
+      // (Optional) clear container in case of partial previous render
+      const c = document.getElementById('paypal-button-container');
+      if (c) c.innerHTML = '';
+
+      paypal.Buttons({
+        createOrder: function(){
+          clearPaypalError();
+
+          // ✅ lock so it cannot call twice
+          if (creatingOrder) {
+            return Promise.reject(new Error("Order creation already in progress."));
+          }
+          creatingOrder = true;
+
+          const fee = Number(deliveryFeeInput?.value || 0);
+          const shipName = document.querySelector('input[name="shippingName"]')?.value || '';
+
+          return fetch('/paypal/create-order', {
+            method: 'POST',
+            credentials: 'same-origin',
+            headers: {'Content-Type':'application/json'},
+            body: JSON.stringify({
+              deliveryFee: fee.toFixed(2),
+              items: __clientCartItems,
+              subtotal: __clientCartSubtotal,
+              shippingName: shipName
+            })
+          })
+          .then(async (r) => {
+            const data = await r.json().catch(() => ({}));
+            if (!r.ok) throw new Error(data?.error || `create-order failed (${r.status})`);
+            return data;
+          })
+          .then(d => {
+            if (!d?.id) throw new Error(d?.error || 'No order id');
+            paypalOrderIdEl.value = d.id;
+            return d.id;
+          })
+          .finally(() => {
+            creatingOrder = false;
+          });
+        },
+
+        onApprove: function(data){
+          clearPaypalError();
+
+          return fetch('/paypal/capture-order', {
+            method: 'POST',
+            credentials: 'same-origin',
+            headers: {'Content-Type':'application/json'},
+            body: JSON.stringify({ orderId: data.orderID })
+          })
+          .then(async (r) => {
+            const data = await r.json().catch(() => ({}));
+            if (!r.ok) throw new Error(data?.error || `capture-order failed (${r.status})`);
+            return data;
+          })
+          .then(async (res) => {
+            if (res?.error) throw new Error(res.error);
+
+            paypalPaidEl.value = '1';
+            paypalCaptureIdEl.value =
+              (res?.capture?.purchase_units?.[0]?.payments?.captures?.[0]?.id || '');
+
+            // ✅ OTP required flag (keep)
+            otpRequiredEl.value = '1';
+
+            // ✅ Send OTP
+            await fetch('/send-otp', {
+              method: 'POST',
+              credentials: 'same-origin',
+              headers: {'Content-Type':'application/json'},
+              body: JSON.stringify({
+                orderId: data.orderID,
+                captureId: paypalCaptureIdEl.value,
+                phone: document.getElementById('shippingPhone')?.value || ''
+              })
+            });
+
+            // ✅ Submit checkout form once
+            if (!isSubmitting) {
+              isSubmitting = true;
+              checkoutForm.submit();
+            }
+          })
+          .catch(err => {
+            console.error(err);
+            setPaypalError(err.message || 'PayPal capture error.');
+            paypalPaidEl.value = '0';
+            otpRequiredEl.value = '0';
+            throw err;
+          });
+        },
+
+        onError: function(err){
+          console.error(err);
+          setPaypalError(err?.message || 'PayPal error.');
+          if (paypalPaidEl) paypalPaidEl.value = '0';
+          if (otpRequiredEl) otpRequiredEl.value = '0';
+        }
+      }).render('#paypal-button-container')
+        .catch(err => {
+          // If render fails, allow retry by toggling payment radio again
+          console.error("PayPal render failed:", err);
+          paypalRendered = false;
+          setPaypalError('Failed to render PayPal buttons.');
+        });
+    }
+
+    paymentRadios.forEach(r => r.addEventListener('change', () => {
+      const sel = Array.from(paymentRadios).find(x => x.checked);
+      const isPaypal = sel && sel.value === 'paypal';
+
+      if (paypalWrap) paypalWrap.style.display = isPaypal ? 'block' : 'none';
+
+      if (isPaypal) {
+        paypalPaidEl.value = '0';
+        otpRequiredEl.value = '0';
+        maybeRenderPaypal();
+      } else {
+        otpRequiredEl.value = '0';
+      }
+    }));
+
+    checkoutForm.addEventListener('submit', function(e){
+      const sel = Array.from(paymentRadios).find(x => x.checked);
+      const isPaypal = sel && sel.value === 'paypal';
+
+      if (isPaypal && paypalPaidEl && paypalPaidEl.value !== '1') {
+        e.preventDefault();
+        e.stopPropagation();
+        setPaypalError('Please complete PayPal payment first.');
+        if (paypalWrap) paypalWrap.style.display = 'block';
+        document.getElementById('paypal-button-container')?.scrollIntoView({behavior:'smooth', block:'center'});
+      }
+    });
+
   })();
 </script>
