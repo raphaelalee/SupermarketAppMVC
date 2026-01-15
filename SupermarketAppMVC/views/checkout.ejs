@@ -125,6 +125,16 @@
                   <div class="ms-2">Cash on Delivery</div>
                 </label>
 
+                <!-- ✅ NETS button (NOT a nested form) -->
+                <div class="mt-2">
+                  <button type="button" id="nets-btn" class="btn btn-outline-dark">
+                    Pay with NETS QR
+                  </button>
+                  <div class="text-muted small mt-1" id="nets-hint" style="display:none;">
+                    NETS will open a QR page. Do not click "Complete Order" for NETS.
+                  </div>
+                </div>
+
                 <div id="paypal-wrap" style="display:none; margin-top:10px;">
                   <div id="paypal-error" style="display:none;color:#b00020;margin-bottom:8px"></div>
                   <div id="paypal-button-container"></div>
@@ -137,6 +147,9 @@
             </div>
           </section>
         </form>
+
+        <!-- ✅ Hidden NETS form OUTSIDE the checkout form -->
+        <form id="nets-form" action="/nets/generate" method="POST" style="display:none;"></form>
       </div>
 
       <aside class="col-lg-5">
@@ -269,10 +282,8 @@
         return;
       }
 
-      // ✅ Mark rendered BEFORE render to avoid double-render race
       paypalRendered = true;
 
-      // (Optional) clear container in case of partial previous render
       const c = document.getElementById('paypal-button-container');
       if (c) c.innerHTML = '';
 
@@ -280,7 +291,6 @@
         createOrder: function(){
           clearPaypalError();
 
-          // ✅ lock so it cannot call twice
           if (creatingOrder) {
             return Promise.reject(new Error("Order creation already in progress."));
           }
@@ -336,10 +346,8 @@
             paypalCaptureIdEl.value =
               (res?.capture?.purchase_units?.[0]?.payments?.captures?.[0]?.id || '');
 
-            // ✅ OTP required flag (keep)
             otpRequiredEl.value = '1';
 
-            // ✅ Send OTP
             await fetch('/send-otp', {
               method: 'POST',
               credentials: 'same-origin',
@@ -351,7 +359,6 @@
               })
             });
 
-            // ✅ Submit checkout form once
             if (!isSubmitting) {
               isSubmitting = true;
               checkoutForm.submit();
@@ -374,18 +381,46 @@
         }
       }).render('#paypal-button-container')
         .catch(err => {
-          // If render fails, allow retry by toggling payment radio again
           console.error("PayPal render failed:", err);
           paypalRendered = false;
           setPaypalError('Failed to render PayPal buttons.');
         });
     }
 
+    // ===== NETS (ADDED) =====
+    const netsBtn = document.getElementById('nets-btn');
+    const netsForm = document.getElementById('nets-form');
+    const completeBtn = document.getElementById('complete-order-btn');
+    const netsHint = document.getElementById('nets-hint');
+
+    function isNetsSelected(){
+      const sel = Array.from(paymentRadios).find(x => x.checked);
+      return !!(sel && sel.value === 'nets');
+    }
+
+    if (netsBtn) {
+      netsBtn.addEventListener('click', function(){
+        // Optional: enforce delivery fields validation before letting NETS proceed
+        // If you want NETS to ignore address validation, remove this block.
+        if (!checkoutForm.checkValidity()) {
+          checkoutForm.reportValidity();
+          return;
+        }
+        if (netsForm) netsForm.submit();
+      });
+    }
+    // ===== END NETS (ADDED) =====
+
     paymentRadios.forEach(r => r.addEventListener('change', () => {
       const sel = Array.from(paymentRadios).find(x => x.checked);
       const isPaypal = sel && sel.value === 'paypal';
 
       if (paypalWrap) paypalWrap.style.display = isPaypal ? 'block' : 'none';
+
+      // NETS UX: if NETS is selected, disable "Complete Order"
+      const netsSelected = sel && sel.value === 'nets';
+      if (completeBtn) completeBtn.disabled = !!netsSelected;
+      if (netsHint) netsHint.style.display = netsSelected ? 'block' : 'none';
 
       if (isPaypal) {
         paypalPaidEl.value = '0';
@@ -400,6 +435,16 @@
       const sel = Array.from(paymentRadios).find(x => x.checked);
       const isPaypal = sel && sel.value === 'paypal';
 
+      // If NETS chosen, block normal checkout submit
+      const isNets = sel && sel.value === 'nets';
+      if (isNets) {
+        e.preventDefault();
+        e.stopPropagation();
+        // Kick them to NETS QR instead
+        netsBtn?.click();
+        return;
+      }
+
       if (isPaypal && paypalPaidEl && paypalPaidEl.value !== '1') {
         e.preventDefault();
         e.stopPropagation();
@@ -408,6 +453,16 @@
         document.getElementById('paypal-button-container')?.scrollIntoView({behavior:'smooth', block:'center'});
       }
     });
+
+    // Initial state
+    (function initPaymentUI(){
+      const sel = Array.from(paymentRadios).find(x => x.checked);
+      const isPaypal = sel && sel.value === 'paypal';
+      if (paypalWrap) paypalWrap.style.display = isPaypal ? 'block' : 'none';
+      const isNets = sel && sel.value === 'nets';
+      if (completeBtn) completeBtn.disabled = !!isNets;
+      if (netsHint) netsHint.style.display = isNets ? 'block' : 'none';
+    })();
 
   })();
 </script>
