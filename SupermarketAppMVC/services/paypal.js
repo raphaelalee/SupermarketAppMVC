@@ -1,14 +1,9 @@
 // services/paypal.js
-const fetch = require("node-fetch");
+// Uses Node.js 18+ built-in fetch (NO node-fetch)
 
 const PAYPAL_CLIENT = process.env.PAYPAL_CLIENT_ID;
 const PAYPAL_SECRET = process.env.PAYPAL_CLIENT_SECRET;
-
-// IMPORTANT:
-// For sandbox use: https://api-m.sandbox.paypal.com
-// For live use:    https://api-m.paypal.com
 const PAYPAL_API = process.env.PAYPAL_API;
-
 const DEFAULT_CURRENCY = process.env.PAYPAL_CURRENCY || "SGD";
 
 function mustHaveEnv(name, value) {
@@ -17,12 +12,15 @@ function mustHaveEnv(name, value) {
   }
 }
 
+// Validate required env vars at startup
 mustHaveEnv("PAYPAL_CLIENT_ID", PAYPAL_CLIENT);
 mustHaveEnv("PAYPAL_CLIENT_SECRET", PAYPAL_SECRET);
 mustHaveEnv("PAYPAL_API", PAYPAL_API);
 
 async function getAccessToken() {
-  const auth = Buffer.from(`${PAYPAL_CLIENT}:${PAYPAL_SECRET}`).toString("base64");
+  const auth = Buffer.from(
+    `${PAYPAL_CLIENT}:${PAYPAL_SECRET}`
+  ).toString("base64");
 
   const response = await fetch(`${PAYPAL_API}/v1/oauth2/token`, {
     method: "POST",
@@ -34,9 +32,13 @@ async function getAccessToken() {
   });
 
   const data = await response.json();
+
   if (!response.ok) {
-    console.error('PayPal getAccessToken failed', { status: response.status, body: data });
-    throw new Error(`PayPal getAccessToken failed: ${JSON.stringify(data)}`);
+    console.error("PayPal getAccessToken failed", {
+      status: response.status,
+      body: data,
+    });
+    throw new Error(`PayPal getAccessToken failed`);
   }
 
   return data.access_token;
@@ -44,16 +46,12 @@ async function getAccessToken() {
 
 /**
  * Create PayPal order
- * @param {string|number} amount - Total amount, e.g. "12.34"
+ * @param {string|number} amount
  * @param {object} options
- * @param {string} options.currency - e.g. "SGD"
- * @param {string} options.invoiceId - your internal order id (optional)
- * @param {string} options.description - optional text
  */
 async function createOrder(amount, options = {}) {
   const accessToken = await getAccessToken();
 
-  // Force proper 2dp money string
   const value = Number(amount).toFixed(2);
   if (Number.isNaN(Number(value)) || Number(value) <= 0) {
     throw new Error(`Invalid amount for createOrder: ${amount}`);
@@ -73,16 +71,19 @@ async function createOrder(amount, options = {}) {
     ],
   };
 
-  // Optionally include shipping name so the PayPal approval screen shows recipient
   if (options.shippingName) {
     payload.purchase_units[0].shipping = {
       name: { full_name: String(options.shippingName) },
     };
   }
 
-  // Optional helpful metadata
-  if (options.invoiceId) payload.purchase_units[0].invoice_id = String(options.invoiceId);
-  if (options.description) payload.purchase_units[0].description = String(options.description);
+  if (options.invoiceId) {
+    payload.purchase_units[0].invoice_id = String(options.invoiceId);
+  }
+
+  if (options.description) {
+    payload.purchase_units[0].description = String(options.description);
+  }
 
   const response = await fetch(`${PAYPAL_API}/v2/checkout/orders`, {
     method: "POST",
@@ -94,34 +95,50 @@ async function createOrder(amount, options = {}) {
   });
 
   const data = await response.json();
+
   if (!response.ok) {
-    console.error('PayPal createOrder failed', { status: response.status, body: data, payload });
-    throw new Error(`PayPal createOrder failed: ${JSON.stringify(data)}`);
-  }
-
-  return data; // includes data.id
-}
-
-async function captureOrder(orderId) {
-  const accessToken = await getAccessToken();
-
-  if (!orderId) throw new Error("Missing orderId for captureOrder");
-
-  const response = await fetch(`${PAYPAL_API}/v2/checkout/orders/${orderId}/capture`, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${accessToken}`,
-    },
-  });
-
-  const data = await response.json();
-  if (!response.ok) {
-    console.error('PayPal captureOrder failed', { status: response.status, body: data, orderId });
-    throw new Error(`PayPal captureOrder failed: ${JSON.stringify(data)}`);
+    console.error("PayPal createOrder failed", {
+      status: response.status,
+      body: data,
+      payload,
+    });
+    throw new Error(`PayPal createOrder failed`);
   }
 
   return data;
 }
 
-module.exports = { createOrder, captureOrder };
+async function captureOrder(orderId) {
+  if (!orderId) throw new Error("Missing orderId for captureOrder");
+
+  const accessToken = await getAccessToken();
+
+  const response = await fetch(
+    `${PAYPAL_API}/v2/checkout/orders/${orderId}/capture`,
+    {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${accessToken}`,
+      },
+    }
+  );
+
+  const data = await response.json();
+
+  if (!response.ok) {
+    console.error("PayPal captureOrder failed", {
+      status: response.status,
+      body: data,
+      orderId,
+    });
+    throw new Error(`PayPal captureOrder failed`);
+  }
+
+  return data;
+}
+
+module.exports = {
+  createOrder,
+  captureOrder,
+};

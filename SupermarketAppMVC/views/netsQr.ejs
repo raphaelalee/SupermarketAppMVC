@@ -152,7 +152,8 @@
         if (data.success) {
           setStatus("Payment successful", "Redirecting…");
           evtSource.close();
-          window.location.href = "/nets-qr/success";
+          // Redirect to /nets/success which will forward to the order receipt when available
+          window.location.href = "/nets/success";
         }
 
         if (data.fail) {

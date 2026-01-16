@@ -3,7 +3,9 @@
 
 const Order = require("../models/order");
 const UserCart = require("../models/userCart");
-const paypal = require("./services/paypal");
+const paypal = require("../services/paypal");
+
+
 
 exports.renderCheckout = (req, res) => {
 	const items = res.locals.cartDetailed || [];

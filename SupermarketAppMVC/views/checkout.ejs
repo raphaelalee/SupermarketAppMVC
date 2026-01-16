@@ -9,6 +9,7 @@
     </header>
 
     <div class="row g-4">
+      <!-- LEFT -->
       <div class="col-lg-7">
         <form method="POST" action="/checkout" id="checkout-form" class="card border-0 shadow-sm p-4" novalidate>
           <input type="hidden" name="deliveryMethod" id="deliveryMethod" value="standard">
@@ -18,7 +19,7 @@
           <input type="hidden" name="paypalCaptureId" id="paypalCaptureId" value="">
           <input type="hidden" name="paypalPaid" id="paypalPaid" value="0">
 
-          <!-- ✅ NEW: OTP required flag for Option 2 -->
+          <!-- OTP required flag -->
           <input type="hidden" name="otpRequired" id="otpRequired" value="0">
 
           <section class="mb-4">
@@ -98,8 +99,10 @@
             </div>
             <p class="text-muted small mb-3">Pick how you’d like to pay.</p>
 
+            <!-- ✅ FIXED nesting: no stray closing tags -->
             <div class="row g-3">
               <div class="col-12">
+
                 <label class="d-flex align-items-center mb-2">
                   <input type="radio" name="payment" value="card" checked>
                   <div class="ms-2">Card (placeholder)</div>
@@ -125,20 +128,22 @@
                   <div class="ms-2">Cash on Delivery</div>
                 </label>
 
-                <!-- ✅ NETS button (NOT a nested form) -->
-                <div class="mt-2">
-                  <button type="button" id="nets-btn" class="btn btn-outline-dark">
-                    Pay with NETS QR
-                  </button>
-                  <div class="text-muted small mt-1" id="nets-hint" style="display:none;">
-                    NETS will open a QR page. Do not click "Complete Order" for NETS.
-                  </div>
+                <!-- ✅ NETS as radio -->
+                <label class="d-flex align-items-center mb-2">
+                  <input type="radio" name="payment" value="nets">
+                  <div class="ms-2">NETS (QR)</div>
+                </label>
+
+                <div class="text-muted small mt-1" id="nets-hint" style="display:none;">
+                  NETS will bring you to a QR page after you click "Complete Order".
                 </div>
 
+                <!-- PayPal UI -->
                 <div id="paypal-wrap" style="display:none; margin-top:10px;">
                   <div id="paypal-error" style="display:none;color:#b00020;margin-bottom:8px"></div>
                   <div id="paypal-button-container"></div>
                 </div>
+
               </div>
             </div>
 
@@ -147,11 +152,9 @@
             </div>
           </section>
         </form>
-
-        <!-- ✅ Hidden NETS form OUTSIDE the checkout form -->
-        <form id="nets-form" action="/nets/generate" method="POST" style="display:none;"></form>
       </div>
 
+      <!-- RIGHT -->
       <aside class="col-lg-5">
         <div class="card border-0 shadow-sm p-4 mb-3">
           <h6 class="fw-semibold mb-3">Order summary</h6>
@@ -192,13 +195,14 @@
           </div>
         </div>
       </aside>
+
     </div>
   </div>
 </section>
 
 <%- include('partials/footer') %>
 
-<!-- PayPal SDK (single copy) -->
+<!-- PayPal SDK -->
 <script src="https://www.paypal.com/sdk/js?client-id=<%= paypalClientId %>&currency=<%= paypalCurrency %>"></script>
 
 <script>
@@ -219,6 +223,8 @@
     const otpRequiredEl = document.getElementById('otpRequired');
 
     const checkoutForm = document.getElementById('checkout-form');
+    const completeBtn = document.getElementById('complete-order-btn');
+    const netsHint = document.getElementById('nets-hint');
 
     const __clientCartItems = <%- JSON.stringify(items || []) %>;
     const __clientCartSubtotal = <%= Number(total || 0).toFixed(2) %>;
@@ -272,7 +278,7 @@
 
     let paypalRendered = false;
     let isSubmitting = false;
-    let creatingOrder = false; // ✅ prevents double /paypal/create-order
+    let creatingOrder = false;
 
     function maybeRenderPaypal(){
       if (paypalRendered) return;
@@ -387,40 +393,14 @@
         });
     }
 
-    // ===== NETS (ADDED) =====
-    const netsBtn = document.getElementById('nets-btn');
-    const netsForm = document.getElementById('nets-form');
-    const completeBtn = document.getElementById('complete-order-btn');
-    const netsHint = document.getElementById('nets-hint');
-
-    function isNetsSelected(){
-      const sel = Array.from(paymentRadios).find(x => x.checked);
-      return !!(sel && sel.value === 'nets');
-    }
-
-    if (netsBtn) {
-      netsBtn.addEventListener('click', function(){
-        // Optional: enforce delivery fields validation before letting NETS proceed
-        // If you want NETS to ignore address validation, remove this block.
-        if (!checkoutForm.checkValidity()) {
-          checkoutForm.reportValidity();
-          return;
-        }
-        if (netsForm) netsForm.submit();
-      });
-    }
-    // ===== END NETS (ADDED) =====
-
+    // Payment change UI
     paymentRadios.forEach(r => r.addEventListener('change', () => {
       const sel = Array.from(paymentRadios).find(x => x.checked);
       const isPaypal = sel && sel.value === 'paypal';
+      const isNets = sel && sel.value === 'nets';
 
       if (paypalWrap) paypalWrap.style.display = isPaypal ? 'block' : 'none';
-
-      // NETS UX: if NETS is selected, disable "Complete Order"
-      const netsSelected = sel && sel.value === 'nets';
-      if (completeBtn) completeBtn.disabled = !!netsSelected;
-      if (netsHint) netsHint.style.display = netsSelected ? 'block' : 'none';
+      if (netsHint) netsHint.style.display = isNets ? 'block' : 'none';
 
       if (isPaypal) {
         paypalPaidEl.value = '0';
@@ -431,19 +411,27 @@
       }
     }));
 
+    // ✅ NETS redirect (Option A) + PayPal guard
     checkoutForm.addEventListener('submit', function(e){
       const sel = Array.from(paymentRadios).find(x => x.checked);
       const isPaypal = sel && sel.value === 'paypal';
-
-      // If NETS chosen, block normal checkout submit
       const isNets = sel && sel.value === 'nets';
+
       if (isNets) {
-        e.preventDefault();
-        e.stopPropagation();
-        // Kick them to NETS QR instead
-        netsBtn?.click();
-        return;
+        // Allow normal POST /checkout so server can create order/session then redirect
+        if (!checkoutForm.checkValidity()) {
+          e.preventDefault();
+          e.stopPropagation();
+          checkoutForm.reportValidity();
+          return;
+        }
+
+        // optional: clear PayPal flags so server doesn't think PayPal flow
+        paypalPaidEl.value = "0";
+        otpRequiredEl.value = "0";
+        return; // do NOT preventDefault
       }
+
 
       if (isPaypal && paypalPaidEl && paypalPaidEl.value !== '1') {
         e.preventDefault();
@@ -458,9 +446,8 @@
     (function initPaymentUI(){
       const sel = Array.from(paymentRadios).find(x => x.checked);
       const isPaypal = sel && sel.value === 'paypal';
-      if (paypalWrap) paypalWrap.style.display = isPaypal ? 'block' : 'none';
       const isNets = sel && sel.value === 'nets';
-      if (completeBtn) completeBtn.disabled = !!isNets;
+      if (paypalWrap) paypalWrap.style.display = isPaypal ? 'block' : 'none';
       if (netsHint) netsHint.style.display = isNets ? 'block' : 'none';
     })();
 

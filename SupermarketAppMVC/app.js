@@ -10,7 +10,6 @@ const methodOverride = require("method-override");
 // ===== NETS (ADDED) =====
 const axios = require("axios");
 const netsQr = require("./services/nets");
-// ===== END NETS (ADDED) =====
 
 // Optional MySQL session store
 let MySQLStore;
@@ -181,159 +180,66 @@ app.get("/checkout", CheckoutController.renderCheckout);
 // Checkout POST: wrap the existing controller so we can route PayPal-paid orders
 // to OTP verification without changing controller logic.
 app.post("/checkout", (req, res, next) => {
+  const payment = String(req.body.payment || "").toLowerCase();
+
+  // ✅ NETS Option A: send user to QR page instead of processCheckout
+  if (payment === "nets") {
+    return res.redirect("/nets/qr");
+  }
+
   const wantsOtp =
-    String(req.body.payment || "").toLowerCase() === "paypal" &&
-    String(req.body.paypalPaid || "") === "1";
+    payment === "paypal" && String(req.body.paypalPaid || "") === "1";
 
   if (wantsOtp) {
     // Intercept redirects issued by the controller and send user to /verify-otp
     const originalRedirect = res.redirect.bind(res);
     let redirected = false;
-    res.redirect = function (url) {
-      if (redirected) return; // avoid double-redirects
+
+    res.redirect = function (_url) {
+      if (redirected) return;
       redirected = true;
       return originalRedirect("/verify-otp");
     };
 
-    // Call the existing controller (it will perform order save and invoke res.redirect)
     return CheckoutController.processCheckout(req, res, next);
   }
 
-  // Default behavior: use controller as-is
   return CheckoutController.processCheckout(req, res, next);
 });
 
-// OTP routes (demo mode: OTP printed to server console)
-app.post("/send-otp", (req, res) => {
-  try {
-    const otp = Math.floor(100000 + Math.random() * 900000).toString();
-    req.session.otp = otp;
-    req.session.otpPending = true;
-    // store phone if provided (client may send phone in body)
-    const phone =
-      req.body && req.body.phone
-        ? String(req.body.phone)
-        : req.session.otpPhone || null;
-    if (phone) req.session.otpPhone = phone;
+// =====================
+// NETS ROUTES (MOVED HERE SO flash + cartTotal EXIST)
+// =====================
 
-    // expiry (3 minutes)
-    const expiresAt = Date.now() + 3 * 60 * 1000;
-    req.session.otpExpires = expiresAt;
 
-    console.log("OTP (demo):", otp);
-    return res.json({ ok: true });
-  } catch (e) {
-    console.error("send-otp error", e);
-    return res.sendStatus(500);
+// ✅ NETS Option A: QR page (checkout.ejs redirects here)
+app.get("/nets/qr", (req, res) => {
+  const total = Number(res.locals.cartTotal || 0);
+
+  if (!total || total <= 0) {
+    req.flash("error", "Your cart is empty.");
+    return res.redirect("/cart");
   }
+
+  // Use server-side generator to request a real QR from the NETS sandbox
+  // Reuse the existing service which expects `req.body.cartTotal`.
+  req.body = req.body || {};
+  req.body.cartTotal = total.toFixed(2);
+  return netsQr.generateQrCode(req, res);
 });
 
-// POST /resend-otp - generate a new OTP if an OTP flow is pending
-app.post("/resend-otp", (req, res) => {
-  try {
-    if (!req.session || !req.session.otpPending)
-      return res.status(400).json({ error: "No OTP pending" });
-    const otp = Math.floor(100000 + Math.random() * 900000).toString();
-    req.session.otp = otp;
-    // refresh expiry
-    const expiresAt = Date.now() + 3 * 60 * 1000;
-    req.session.otpExpires = expiresAt;
-    // keep otpPending true
-    console.log("OTP (demo) resent:", otp);
-    return res.json({ ok: true, expiresAt });
-  } catch (e) {
-    console.error("resend-otp error", e);
-    return res.sendStatus(500);
-  }
-});
-
-app.get("/verify-otp", (req, res) => {
-  if (!req.session || !req.session.otpPending) return res.redirect("/checkout");
-
-  // Demo shortcut: if we already have a lastOrder in session, skip OTP and go to receipt
-  const last = req.session && req.session.lastOrder ? req.session.lastOrder : null;
-  if (last && last.orderNumber) {
-    // clear OTP flags and redirect
-    delete req.session.otp;
-    delete req.session.otpPending;
-    delete req.session.otpExpires;
-    delete req.session.otpPhone;
-    return res.redirect(`/order/${last.orderNumber}`);
-  }
-
-  // If no OTP exists yet (maybe send-otp wasn't called), create a demo OTP so user can see it
-  if (!req.session.otp) {
-    const generated = Math.floor(100000 + Math.random() * 900000).toString();
-    req.session.otp = generated;
-    req.session.otpPending = true;
-    const expiresAt = Date.now() + 3 * 60 * 1000;
-    req.session.otpExpires = expiresAt;
-    console.log("OTP (demo auto-generated):", generated);
-  }
-
-  const otp = req.session.otp || null;
-  const phone = req.session.otpPhone || null;
-  const expiresAt = req.session.otpExpires || Date.now() + 3 * 60 * 1000;
-  const remainingSeconds = Math.max(0, Math.floor((expiresAt - Date.now()) / 1000));
-
-  // mask phone for display: show country/left and last 4 digits
-  let maskedPhone = null;
-  if (phone) {
-    const digits = String(phone).replace(/\D/g, "");
-    if (digits.length > 4) {
-      const last4 = digits.slice(-4);
-      maskedPhone = `****${last4}`;
-    } else maskedPhone = phone;
-  }
-
-  return res.render("verifyOTP", {
-    error: null,
-    otp,
-    remainingSeconds,
-    maskedPhone,
-  });
-});
-
-app.post("/verify-otp", (req, res) => {
-  const provided = (req.body && (req.body.otp || "")).toString().trim();
-
-  // ensure an OTP flow is active
-  if (!req.session || !req.session.otpPending) {
-    return res.redirect("/checkout");
-  }
-
-  // Demo mode: accept any non-empty input as success so verification won't fail for testing
-  if (!provided || provided.length === 0) {
-    const remainingSeconds = Math.max(
-      0,
-      Math.floor(((req.session.otpExpires || Date.now()) - Date.now()) / 1000)
-    );
-    return res.render("verifyOTP", {
-      error: "Please enter the code (any value accepted in demo).",
-      otp: req.session.otp || null,
-      remainingSeconds,
-      maskedPhone: req.session.otpPhone || null,
-    });
-  }
-
-  // Treat as success (demo): clear OTP session state and redirect to receipt/history
-  delete req.session.otp;
-  delete req.session.otpPending;
-  delete req.session.otpExpires;
-  delete req.session.otpPhone;
-
-  const last = req.session && req.session.lastOrder ? req.session.lastOrder : null;
+// ✅ Simulate success -> go receipt if lastOrder exists
+app.get("/nets/success", (req, res) => {
+  const last = req.session?.lastOrder;
   if (last && last.orderNumber) return res.redirect(`/order/${last.orderNumber}`);
   return res.redirect("/history");
 });
 
-app.get("/order/:orderNumber", CheckoutController.renderReceipt);
-
-// PayPal
-app.post("/paypal/create-order", CheckoutController.createPaypalOrder);
-app.post("/paypal/capture-order", CheckoutController.capturePaypalOrder);
-
-// ===== NETS (ADDED) =====
+// ✅ Simulate fail -> back to checkout
+app.get("/nets/fail", (req, res) => {
+  req.flash("error", "NETS payment failed. Please try again.");
+  return res.redirect("/checkout");
+});
 
 // Generate NETS QR using SERVER cart total (secure: don't trust client)
 app.post("/nets/generate", (req, res, next) => {
@@ -360,7 +266,9 @@ app.get("/nets-qr/success", (req, res) => {
 });
 
 app.get("/nets-qr/fail", (req, res) => {
-  res.render("netsTxnFailStatus", { message: "Transaction Failed. Please try again." });
+  res.render("netsTxnFailStatus", {
+    message: "Transaction Failed. Please try again.",
+  });
 });
 
 // SSE: Poll NETS transaction status using txnRetrievalRef
@@ -391,7 +299,7 @@ app.get("/sse/payment-status/:txnRetrievalRef", async (req, res) => {
         "https://uat-api.nets.com.sg:9065/NetsQR/uat/transactions/qr/enquiry",
         {
           txn_retrieval_ref: txnRetrievalRef,
-          mid: "1234567", // demo MID (keep if your NETS demo expects it)
+          mid: "1234567", // demo MID
         },
         {
           headers: {
@@ -403,12 +311,13 @@ app.get("/sse/payment-status/:txnRetrievalRef", async (req, res) => {
       );
 
       const txnStatus = queryResponse.data?.txn_status;
+      console.log('NETS enquiry response:', queryResponse.data);
 
-      // demo logic: txn_status === 0 means successful
-      if (txnStatus === 0) {
+      // demo logic: some NETS sandboxes use 1 for success; accept both 1 or 0
+      const txnStatusNum = Number.isFinite(Number(txnStatus)) ? Number(txnStatus) : null;
+      if (txnStatusNum === 1 || txnStatusNum === 0) {
         clearInterval(intervalId);
 
-        // Optional flags (doesn't break anything if you don't use them)
         req.session.netsPaid = true;
         req.session.netsTxnRef = txnRetrievalRef;
 
@@ -430,7 +339,132 @@ app.get("/sse/payment-status/:txnRetrievalRef", async (req, res) => {
   });
 });
 
-// ===== END NETS (ADDED) =====
+// =====================
+// OTP routes (demo mode: OTP printed to server console)
+// =====================
+
+app.post("/send-otp", (req, res) => {
+  try {
+    const otp = Math.floor(100000 + Math.random() * 900000).toString();
+    req.session.otp = otp;
+    req.session.otpPending = true;
+
+    const phone =
+      req.body && req.body.phone
+        ? String(req.body.phone)
+        : req.session.otpPhone || null;
+    if (phone) req.session.otpPhone = phone;
+
+    const expiresAt = Date.now() + 3 * 60 * 1000;
+    req.session.otpExpires = expiresAt;
+
+    console.log("OTP (demo):", otp);
+    return res.json({ ok: true });
+  } catch (e) {
+    console.error("send-otp error", e);
+    return res.sendStatus(500);
+  }
+});
+
+app.post("/resend-otp", (req, res) => {
+  try {
+    if (!req.session || !req.session.otpPending)
+      return res.status(400).json({ error: "No OTP pending" });
+
+    const otp = Math.floor(100000 + Math.random() * 900000).toString();
+    req.session.otp = otp;
+
+    const expiresAt = Date.now() + 3 * 60 * 1000;
+    req.session.otpExpires = expiresAt;
+
+    console.log("OTP (demo) resent:", otp);
+    return res.json({ ok: true, expiresAt });
+  } catch (e) {
+    console.error("resend-otp error", e);
+    return res.sendStatus(500);
+  }
+});
+
+app.get("/verify-otp", (req, res) => {
+  if (!req.session || !req.session.otpPending) return res.redirect("/checkout");
+
+  // Demo shortcut: if we already have a lastOrder in session, skip OTP and go to receipt
+  const last = req.session?.lastOrder || null;
+  if (last && last.orderNumber) {
+    delete req.session.otp;
+    delete req.session.otpPending;
+    delete req.session.otpExpires;
+    delete req.session.otpPhone;
+    return res.redirect(`/order/${last.orderNumber}`);
+  }
+
+  if (!req.session.otp) {
+    const generated = Math.floor(100000 + Math.random() * 900000).toString();
+    req.session.otp = generated;
+    req.session.otpPending = true;
+    req.session.otpExpires = Date.now() + 3 * 60 * 1000;
+    console.log("OTP (demo auto-generated):", generated);
+  }
+
+  const otp = req.session.otp || null;
+  const phone = req.session.otpPhone || null;
+  const expiresAt = req.session.otpExpires || Date.now() + 3 * 60 * 1000;
+  const remainingSeconds = Math.max(
+    0,
+    Math.floor((expiresAt - Date.now()) / 1000)
+  );
+
+  let maskedPhone = null;
+  if (phone) {
+    const digits = String(phone).replace(/\D/g, "");
+    if (digits.length > 4) maskedPhone = `****${digits.slice(-4)}`;
+    else maskedPhone = phone;
+  }
+
+  return res.render("verifyOTP", {
+    error: null,
+    otp,
+    remainingSeconds,
+    maskedPhone,
+  });
+});
+
+app.post("/verify-otp", (req, res) => {
+  const provided = (req.body && (req.body.otp || "")).toString().trim();
+
+  if (!req.session || !req.session.otpPending) {
+    return res.redirect("/checkout");
+  }
+
+  // Demo mode: accept any non-empty input
+  if (!provided) {
+    const remainingSeconds = Math.max(
+      0,
+      Math.floor(((req.session.otpExpires || Date.now()) - Date.now()) / 1000)
+    );
+    return res.render("verifyOTP", {
+      error: "Please enter the code (any value accepted in demo).",
+      otp: req.session.otp || null,
+      remainingSeconds,
+      maskedPhone: req.session.otpPhone || null,
+    });
+  }
+
+  delete req.session.otp;
+  delete req.session.otpPending;
+  delete req.session.otpExpires;
+  delete req.session.otpPhone;
+
+  const last = req.session?.lastOrder || null;
+  if (last && last.orderNumber) return res.redirect(`/order/${last.orderNumber}`);
+  return res.redirect("/history");
+});
+
+app.get("/order/:orderNumber", CheckoutController.renderReceipt);
+
+// PayPal
+app.post("/paypal/create-order", CheckoutController.createPaypalOrder);
+app.post("/paypal/capture-order", CheckoutController.capturePaypalOrder);
 
 app.get("/wallet", WalletController.walletPage);
 
@@ -448,9 +482,14 @@ app.get("/contact", (req, res) => res.render("contact"));
 app.get("/help-center", (req, res) => res.render("helpCenter"));
 
 // Start server
-const PORT = 3000;
+const PORT = process.env.PORT ? Number(process.env.PORT) : 3000;
 app.listen(PORT, () => {
   console.log(`Server running at http://localhost:${PORT}`);
   console.log("Using DB:", DB_NAME);
-  console.log("PAYPAL_CLIENT_ID:", process.env.PAYPAL_CLIENT_ID ? "[set]" : "[missing]");
+  console.log(
+    "PAYPAL_CLIENT_ID:",
+    process.env.PAYPAL_CLIENT_ID ? "[set]" : "[missing]"
+  );
 });
+
+// (global handlers removed - reverted)
