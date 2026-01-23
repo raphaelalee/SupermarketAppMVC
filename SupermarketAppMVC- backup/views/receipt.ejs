@@ -1,0 +1,168 @@
+
+<!--
+  NOTES (Receipt)
+  - If items show blank: the template expects each item to have `name` and `price`.
+    * Quick fix: edit the row below to fall back to other properties (we already added fallbacks).
+  - Pickup completed display: code below checks `order.deliveryStatus` or `order.pickedUp` / `order.pickedUpAt`.
+    * To change how pickup is marked complete, update server logic (controllers/AdminController or order update flow) to set `deliveryStatus = 'completed'` or `pickedUp = true`.
+  - Print / Save PDF button uses `window.print()` — safe to change label or hide for demo.
+-->
+
+<%- include('partials/header') %>
+
+<section class="invoice-wrap container py-5">
+  <div class="invoice-card shadow-sm border rounded-3 p-4 bg-white">
+    <header class="d-flex flex-wrap justify-content-between align-items-start mb-4">
+      <div>
+        <h3 class="fw-bold text-success mb-1">FreshMart</h3>
+        <p class="text-muted small mb-0">1 Marina Boulevard, #20-01, Singapore 018989</p>
+        <p class="text-muted small mb-0">UEN: 202412345A</p>
+      </div>
+      <div class="text-end">
+        <h4 class="fw-semibold mb-1">Receipt</h4>
+        <p class="text-muted small mb-0">Order #: <%= order.orderNumber %></p>
+        <p class="text-muted small mb-0">Issued: <%= new Date(order.createdAt || Date.now()).toLocaleString('en-SG', { hour12:false }) %></p>
+      </div>
+    </header>
+
+    <section class="row mb-4">
+      <div class="col-md-6">
+        <div class="border rounded-3 p-3">
+          <h6 class="text-muted mb-2">Bill to</h6>
+          <p class="mb-0 fw-semibold"><%= order.customerName || 'Guest checkout' %></p>
+          <% if (order.customerEmail) { %><p class="text-muted small mb-0"><%= order.customerEmail %></p><% } %>
+          <% if (order.customerPhone) { %><p class="text-muted small mb-0"><%= order.customerPhone %></p><% } %>
+          <p class="text-muted small mb-0">Payment method: <%= (order.paymentMethod || 'PayNow').toUpperCase() %></p>
+        </div>
+      </div>
+      <div class="col-md-6">
+        <div class="border rounded-3 p-3 h-100">
+          <h6 class="text-muted mb-2">Delivery details</h6>
+          <p class="mb-0 fw-semibold text-capitalize"><%= order.deliveryMethod || 'Standard' %></p>
+          <p class="text-muted small mb-0">Delivery fee: S$ <%= Number(order.deliveryFee || 0).toFixed(2) %></p>
+          <% 
+            // Determine status display: for pickup orders, show 'Completed' only when pickup is done.
+            let dispStatus = order.deliveryStatus || 'Processing';
+            const method = (order.deliveryMethod || '').toLowerCase();
+            if (method === 'pickup') {
+              // server may set deliveryStatus to 'completed' or provide a pickedUp boolean/timestamp
+              if (order.deliveryStatus && String(order.deliveryStatus).toLowerCase() === 'completed') {
+                dispStatus = 'Completed';
+              } else if (order.pickedUp || order.pickedUpAt) {
+                dispStatus = 'Completed';
+              } else {
+                // for pickup not yet collected, show ready or the existing status
+                dispStatus = order.deliveryStatus || 'Ready for pickup';
+              }
+            }
+          %>
+          <p class="text-muted small mb-0">Status: <%= dispStatus %></p>
+        </div>
+      </div>
+    </section>
+
+    <div class="table-responsive mb-4">
+      <table class="table table-bordered align-middle mb-0">
+        <thead class="table-light">
+          <tr>
+            <th scope="col">Item</th>
+            <th scope="col" class="text-center" style="width:120px;">Qty</th>
+            <th scope="col" class="text-end" style="width:140px;">Unit Price</th>
+            <th scope="col" class="text-end" style="width:140px;">Amount</th>
+          </tr>
+        </thead>
+        <tbody>
+          <% items.forEach((it) => { %>
+            <tr>
+              <td><%= it.name || it.productName || it.product_name || it.title || ('Item ' + (it.productId || it.id || '')) %></td>
+              <td class="text-center"><%= it.quantity %></td>
+              <td class="text-end">S$ <%= Number(it.price).toFixed(2) %></td>
+              <td class="text-end fw-semibold">S$ <%= Number(it.subtotal || 0).toFixed(2) %></td>
+            </tr>
+          <% }) %>
+        </tbody>
+      </table>
+    </div>
+
+    <section class="row">
+      <div class="col-md-6">
+        <div class="border rounded-3 p-3 h-100">
+          <h6 class="text-muted mb-2">Notes</h6>
+          <p class="text-muted small mb-0">Thank you for supporting local growers. This receipt serves as proof of payment.</p>
+        </div>
+      </div>
+      <div class="col-md-6">
+        <div class="border rounded-3 p-3">
+          <div class="summary-row">
+            <span>Subtotal</span>
+            <strong>S$ <%= Number(order.subtotal || 0).toFixed(2) %></strong>
+          </div>
+          <div class="summary-row">
+            <span>Delivery fee</span>
+            <strong>S$ <%= Number(order.deliveryFee || 0).toFixed(2) %></strong>
+          </div>
+          <div class="summary-row">
+            <span>Tax (included)</span>
+            <strong>S$ 0.00</strong>
+          </div>
+          <hr class="my-2">
+          <div class="summary-row total-row">
+            <span>Total paid</span>
+            <strong>S$ <%= Number(order.total || 0).toFixed(2) %></strong>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <% if (order.paymentInstructions) { %>
+      <section class="row mt-3">
+        <div class="col-md-12">
+          <div class="border rounded-3 p-3">
+            <h6 class="text-muted mb-2">Payment Instructions</h6>
+            <% const pi = order.paymentInstructions; %>
+            <p class="mb-1"><strong>Method:</strong> <%= (pi.method || order.paymentMethod || '').toUpperCase() %></p>
+            <% if (pi.reference) { %><p class="mb-1"><strong>Reference:</strong> <%= pi.reference %></p><% } %>
+            <% if (pi.bankName) { %>
+              <p class="mb-1"><strong>Bank:</strong> <%= pi.bankName %></p>
+              <p class="mb-1"><strong>Account:</strong> <%= pi.accountNumber %> (<%= pi.accountName %>)</p>
+            <% } %>
+            <% if (pi.qrImage) { %>
+              <div class="mb-2"> <img src="<%= pi.qrImage %>" alt="PayNow QR" style="max-width:180px;" /> </div>
+            <% } %>
+            <% if (pi.note) { %><p class="text-muted small mb-0"><%= pi.note %></p><% } %>
+          </div>
+        </div>
+      </section>
+    <% } %>
+
+    <% if (!order.paid && order.paymentInstructions) { %>
+      <section class="row mt-3">
+        <div class="col-md-12">
+          <div class="border rounded-3 p-3">
+            <h6 class="text-muted mb-2">Confirm Payment</h6>
+            <form method="POST" action="/order/confirm-payment" class="row g-2">
+              <input type="hidden" name="orderNumber" value="<%= order.orderNumber %>">
+              <div class="col-md-6">
+                <label class="form-label small text-muted">Payment reference (optional)</label>
+                <input name="paymentRef" class="form-control form-control-sm" placeholder="e.g. bank txn id or reference">
+              </div>
+              <div class="col-md-6 d-flex align-items-end">
+                <button type="submit" class="btn btn-success btn-sm">Mark Payment Complete</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      </section>
+    <% } %>
+
+    <div class="d-flex justify-content-between align-items-center border-top pt-3 mt-4">
+      <p class="text-muted small mb-0">FreshMart Pte Ltd � hello@freshmart.sg � +65 6123 4567</p>
+      <div>
+        <a href="/" class="btn btn-outline-primary btn-sm me-2" aria-label="Back to home">Back to Home</a>
+        <button class="btn btn-outline-secondary btn-sm" onclick="window.print()">Print / Save PDF</button>
+      </div>
+    </div>
+  </div>
+</section>
+
+<%- include('partials/footer') %>

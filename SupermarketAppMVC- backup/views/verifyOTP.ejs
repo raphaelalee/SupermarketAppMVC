@@ -1,0 +1,170 @@
+<%- include('partials/header') %>
+
+<div class="container py-5">
+  <h3>Enter OTP</h3>
+
+  <% if (error) { %>
+    <p style="color:red"><%= error %></p>
+  <% } %>
+
+  <% if (typeof otp !== 'undefined' && otp) { %>
+    <div style="background:#fff3cd;border:1px solid #ffeeba;padding:12px;margin-bottom:12px;color:#856404;">
+      <strong>DEBUG OTP (demo):</strong> <%= otp %>
+      <div style="font-size:12px;color:#6c757d;margin-top:6px">Visible for testing only.</div>
+    </div>
+  <% } %>
+
+  <% if (typeof otp !== 'undefined' && otp) { %>
+  <% } %>
+  <div style="margin-top:8px;">
+    <div id="sent-to" style="margin-bottom:6px;color:#6c757d;">
+      <% if (typeof maskedPhone !== 'undefined' && maskedPhone) { %>
+        Sent to your phone number ending <strong><%= maskedPhone %></strong>
+      <% } else { %>
+        OTP sent to your phone
+      <% } %>
+    </div>
+
+    <div>
+      <span id="countdown" style="margin-right:12px;color:#6c757d"></span>
+      <button id="resend-otp" class="btn btn-sm btn-outline-secondary">Resend OTP</button>
+      <span id="resend-msg" style="margin-left:8px;color:#6c757d;font-size:0.95rem"></span>
+    </div>
+  </div>
+
+  <script>
+    (function(){
+      const btn = document.getElementById('resend-otp');
+      const msg = document.getElementById('resend-msg');
+      const countdownEl = document.getElementById('countdown');
+
+      // initial remaining seconds from server
+      let remaining = <%= typeof remainingSeconds !== 'undefined' ? remainingSeconds : 0 %>;
+
+      function updateCountdown(){
+        if (remaining > 0) {
+          const m = Math.floor(remaining/60);
+          const s = remaining % 60;
+          countdownEl.textContent = `Resend available in ${m}:${String(s).padStart(2,'0')}`;
+          btn.disabled = true;
+        } else {
+          countdownEl.textContent = '';
+          btn.disabled = false;
+        }
+      }
+
+      updateCountdown();
+      const timer = setInterval(()=>{
+        if (remaining > 0) {
+          remaining -= 1;
+          updateCountdown();
+        } else {
+          clearInterval(timer);
+        }
+      }, 1000);
+
+      if (!btn) return;
+      btn.addEventListener('click', function(e){
+        e.preventDefault();
+        btn.disabled = true;
+        msg.textContent = 'Sending...';
+        fetch('/resend-otp', { method: 'POST', credentials: 'same-origin' })
+          .then(r => r.json().catch(()=>({})))
+          .then(j => {
+            if (j && j.ok) {
+              msg.textContent = 'OTP resent (check server console).';
+              // reset timer if server returned expiresAt
+              if (j.expiresAt) {
+                const now = Date.now();
+                remaining = Math.max(0, Math.floor((j.expiresAt - now)/1000));
+                updateCountdown();
+                // restart simple interval
+                const t2 = setInterval(()=>{
+                  if (remaining > 0) { remaining -= 1; updateCountdown(); } else clearInterval(t2);
+                }, 1000);
+              } else {
+                remaining = 180; // fallback 3 minutes
+              }
+            } else {
+              msg.textContent = j && j.error ? j.error : 'Failed to resend OTP';
+            }
+          })
+          .catch(() => { msg.textContent = 'Network error'; })
+          .finally(()=>{ btn.disabled = false; setTimeout(()=>msg.textContent='',5000); });
+      });
+    })();
+  </script>
+
+  <form method="POST" action="/verify-otp" id="otp-form" style="margin-top:16px;">
+    <div style="display:flex;gap:8px;align-items:center;">
+      <div id="otp-boxes" style="display:flex;gap:8px">
+        <input class="otp-digit" type="tel" inputmode="numeric" pattern="[0-9]*" maxlength="1" aria-label="Digit 1" style="width:48px;height:48px;text-align:center;font-size:1.2rem;border:1px solid #ccc;border-radius:6px">
+        <input class="otp-digit" type="tel" inputmode="numeric" pattern="[0-9]*" maxlength="1" aria-label="Digit 2" style="width:48px;height:48px;text-align:center;font-size:1.2rem;border:1px solid #ccc;border-radius:6px">
+        <input class="otp-digit" type="tel" inputmode="numeric" pattern="[0-9]*" maxlength="1" aria-label="Digit 3" style="width:48px;height:48px;text-align:center;font-size:1.2rem;border:1px solid #ccc;border-radius:6px">
+        <input class="otp-digit" type="tel" inputmode="numeric" pattern="[0-9]*" maxlength="1" aria-label="Digit 4" style="width:48px;height:48px;text-align:center;font-size:1.2rem;border:1px solid #ccc;border-radius:6px">
+        <input class="otp-digit" type="tel" inputmode="numeric" pattern="[0-9]*" maxlength="1" aria-label="Digit 5" style="width:48px;height:48px;text-align:center;font-size:1.2rem;border:1px solid #ccc;border-radius:6px">
+        <input class="otp-digit" type="tel" inputmode="numeric" pattern="[0-9]*" maxlength="1" aria-label="Digit 6" style="width:48px;height:48px;text-align:center;font-size:1.2rem;border:1px solid #ccc;border-radius:6px">
+      </div>
+
+      <button type="submit" id="otp-verify-btn" style="margin-left:12px;padding:10px 16px;border-radius:6px;border:1px solid #222;background:#fff;color:#222">Verify</button>
+    </div>
+
+    <input type="hidden" name="otp" id="otp-hidden">
+  </form>
+
+  <script>
+    (function(){
+      const digits = Array.from(document.querySelectorAll('.otp-digit'));
+      const hidden = document.getElementById('otp-hidden');
+      const form = document.getElementById('otp-form');
+      const otpFromServer = <%- JSON.stringify(typeof otp !== 'undefined' ? otp : null) %>;
+
+      // focus flow and auto-move
+      digits.forEach((el, idx) => {
+        el.addEventListener('input', (e) => {
+          const v = e.target.value.replace(/\D/g,'').slice(0,1);
+          e.target.value = v;
+          if (v && idx < digits.length - 1) digits[idx + 1].focus();
+        });
+
+        el.addEventListener('keydown', (e) => {
+          if (e.key === 'Backspace' && !e.target.value && idx > 0) {
+            digits[idx - 1].focus();
+          }
+        });
+      });
+
+      // allow pasting full code
+      const container = document.getElementById('otp-boxes');
+      container.addEventListener('paste', (e) => {
+        const text = (e.clipboardData || window.clipboardData).getData('text') || '';
+        const only = text.replace(/\D/g, '').slice(0,6).split('');
+        if (only.length) {
+          e.preventDefault();
+          only.forEach((ch, i) => { if (digits[i]) digits[i].value = ch; });
+        }
+      });
+
+      // on submit, join digits into hidden field
+      form.addEventListener('submit', (e) => {
+        hidden.value = digits.map(d => d.value || '').join('');
+      });
+
+      // Autofill demo OTP if provided and auto-submit
+      if (otpFromServer && typeof otpFromServer === 'string') {
+        const parts = otpFromServer.replace(/\D/g,'').slice(0,6).split('');
+        parts.forEach((ch, i) => { if (digits[i]) digits[i].value = ch; });
+        hidden.value = parts.join('');
+        setTimeout(()=>{ try { form.submit(); } catch(e){} }, 500);
+      }
+
+      // small nicety: focus first empty
+      setTimeout(()=>{
+        const firstEmpty = digits.find(d => !d.value);
+        (firstEmpty || digits[0]).focus();
+      }, 50);
+    })();
+  </script>
+</div>
+
+<%- include('partials/footer') %>

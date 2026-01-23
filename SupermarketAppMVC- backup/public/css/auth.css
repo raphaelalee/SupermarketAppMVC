@@ -1,0 +1,19 @@
+.auth-card {
+  max-width: 480px;
+  border: 0;
+  border-radius: 12px;
+  box-shadow: 0 8px 24px rgba(18, 38, 22, 0.08);
+  overflow: hidden;
+}
+.auth-card .card-body { padding: 2rem; }
+.auth-hero { min-height: 72vh; display: flex; align-items: center; }
+.auth-brand { color: #1e7a36; font-weight: 700; letter-spacing: .2px; }
+.auth-sub { color: #6c757d; margin-bottom: 1rem; }
+.btn-success { background-color: #198a3a; border-color: #198a3a; }
+.btn-success:hover { background-color: #166f2f; border-color: #165f2a; }
+.form-control:focus { box-shadow: 0 0 0 0.15rem rgba(25,122,58,0.12); border-color: #198a3a; }
+.auth-footer { font-size: 0.9rem; color: #6c757d; }
+@media (max-width: 576px) {
+  .auth-card { margin: 0 1rem; }
+  .auth-hero { padding-top: 2rem; padding-bottom: 2rem; }
+}

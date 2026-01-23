@@ -147,6 +147,14 @@ exports.processCheckout = (req, res) => {
 	let paypalMeta = null;
 	if (paymentMethod === 'card') paid = true;
 
+	if (paymentMethod === "nets") {
+		if (!req.session.netsPaid) {
+			req.flash("error", "NETS payment not confirmed. Please scan and pay first.");
+			return res.redirect("/checkout");
+		}
+		paid = true;
+	}
+
 	if (paymentMethod === "paypal") {
 		const cap = req.session.paypalCapture;
 		const pending = req.session.paypalPending;
@@ -219,6 +227,7 @@ exports.processCheckout = (req, res) => {
 		createdAt: new Date().toISOString(),
 		items,
 		paymentInstructions: paymentInstructions,
+		...(paymentMethod === "nets" && req.session.netsTxnRef ? { netsTxnRef: req.session.netsTxnRef } : {}),
 		...(paypalMeta ? paypalMeta : {}),
 	};
 
@@ -237,6 +246,9 @@ exports.processCheckout = (req, res) => {
 		// Clear PayPal session proof after use
 		req.session.paypalCapture = null;
 		req.session.paypalPending = null;
+		req.session.netsPaid = null;
+		req.session.netsTxnRef = null;
+		req.session.pendingNetsCheckout = null;
 
 		if (req.session.user?.id) {
 			UserCart.clearCart(req.session.user.id, (clearErr) => {

@@ -1,0 +1,53 @@
+<%- include('partials/header') %>
+
+<section class="py-5 bg-light">
+  <div class="container" style="max-width:900px;">
+    <h1 class="fw-bold text-success text-center mb-4">Contact Us</h1>
+    <p class="text-center text-muted mb-5">
+      Have a question or feedback? We’d love to hear from you!  
+      Reach us via the form below or at our Singapore office.
+    </p>
+
+    <div class="row g-4">
+      <div class="col-md-6">
+        <form action="#" method="POST">
+          <div class="mb-3">
+            <label class="form-label">Full Name</label>
+            <input type="text" class="form-control" placeholder="Your Name" required>
+          </div>
+          <div class="mb-3">
+            <label class="form-label">Email Address</label>
+            <input type="email" class="form-control" placeholder="you@example.com" required>
+          </div>
+          <div class="mb-3">
+            <label class="form-label">Message</label>
+            <textarea class="form-control" rows="5" placeholder="How can we help?" required></textarea>
+          </div>
+          <button type="submit" class="btn btn-success px-4">Send Message</button>
+        </form>
+      </div>
+
+      <div class="col-md-6">
+        <div class="bg-white border rounded-3 p-4 shadow-sm h-100">
+          <h5 class="fw-bold mb-3 text-success">Our Office (Singapore)</h5>
+          <p class="mb-1">📍 1 Marina Boulevard, #20-01, Singapore 018989</p>
+          <p class="mb-1">📞 +65 6123 4567</p>
+          <p class="mb-4">📧 hello@freshmart.sg</p>
+
+          <h6 class="fw-bold text-success">Operating Hours</h6>
+          <p class="mb-0">Mon – Sat  9 AM – 7 PM</p>
+          <p>Sun & PH Closed</p>
+
+          <div class="ratio ratio-16x9 rounded-3 overflow-hidden shadow-sm">
+            <iframe
+              src="https://www.google.com/maps?q=Marina+Boulevard+Singapore&output=embed"
+              style="border:0;" allowfullscreen loading="lazy">
+            </iframe>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<%- include('partials/footer') %>
