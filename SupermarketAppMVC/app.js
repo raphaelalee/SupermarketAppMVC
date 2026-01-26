@@ -545,6 +545,8 @@ app.get("/wallet", WalletController.walletPage);
 
 // Customer-confirm payment for offline methods
 app.post("/order/confirm-payment", CheckoutController.confirmPayment);
+app.post("/order/request-refund", CheckoutController.requestRefund);
+app.post("/order/resend-payment", CheckoutController.resendPaymentInstructions);
 
 // Admin
 app.get("/admin/orders", requireLogin, requireAdmin, AdminController.ordersDashboard);

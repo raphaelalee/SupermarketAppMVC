@@ -20,7 +20,7 @@ const LOW_STOCK_LIMIT = 5;
 const RECENT_ORDERS_LIMIT = 5;
 const DAILY_SALES_DAYS = 7;
 const SALES_HOURS_WINDOW = 24;
-const ORDER_STATUSES = ["pending", "processing", "completed"]; // Defined valid states for an order
+const ORDER_STATUSES = ["pending", "paid", "processing", "completed", "refund_requested", "refunded"]; // Include paid/refund states
 const DEFAULT_STATUS = ORDER_STATUSES[0];
 
 // ======================================
@@ -52,7 +52,7 @@ const mapOrderRow = (o) => {
   // Ensure status is one of the valid defined statuses
   const status = ORDER_STATUSES.includes(statusRaw)
     ? statusRaw
-    : DEFAULT_STATUS;
+    : (paid ? "paid" : DEFAULT_STATUS);
 
   return {
     id: o.id,

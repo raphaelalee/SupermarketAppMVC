@@ -145,6 +145,7 @@ exports.processCheckout = (req, res) => {
 	// PayPal will be validated separately below.
 	let paid = false;
 	let paypalMeta = null;
+	let paidAt = null;
 	if (paymentMethod === 'card') paid = true;
 
 	if (paymentMethod === "nets") {
@@ -175,6 +176,7 @@ exports.processCheckout = (req, res) => {
 		}
 
 		paid = true;
+		paidAt = new Date().toISOString();
 		paypalMeta = {
 			paypalOrderId: cap.orderId,
 			paypalCaptureId: cap.captureId,
@@ -210,6 +212,8 @@ exports.processCheckout = (req, res) => {
 	}
 
 	const orderNumber = `ORD-${Date.now()}-${Math.floor(Math.random() * 900 + 100)}`;
+	const status = paid ? "paid" : "pending";
+	if (paid && !paidAt) paidAt = new Date().toISOString();
 
 	const orderPayload = {
 		orderNumber,
@@ -219,11 +223,13 @@ exports.processCheckout = (req, res) => {
 		total,
 		deliveryMethod,
 		paymentMethod,
+		status,
 		shippingPhone: digitsOnly ? digitsOnly.slice(-8) : null,
 		customerName: req.body.shippingName || (req.session.user && req.session.user.username) || null,
 		customerEmail: (req.session.user && req.session.user.email) || (req.body.customerEmail || null),
 		customerPhone: digitsOnly ? digitsOnly.slice(-8) : null,
 		paid,
+		paidAt,
 		createdAt: new Date().toISOString(),
 		items,
 		paymentInstructions: paymentInstructions,
@@ -270,7 +276,21 @@ exports.renderReceipt = (req, res) => {
 	}
 
 	res.render("receipt", {
-		order: stored,
+		order: {
+			...stored,
+			maskedEmail: stored.customerEmail
+				? (function mask(email){
+						const parts = String(email).split("@");
+						if (parts.length !== 2) return "****";
+						const [user, domain] = parts;
+						if (user.length <= 2) return `${user[0] || ""}*@${domain}`;
+						return `${user[0]}***${user[user.length - 1]}@${domain}`;
+				  })(stored.customerEmail)
+				: null,
+			maskedPhone: stored.customerPhone
+				? `****${String(stored.customerPhone).slice(-4)}`
+				: null,
+		},
 		items: stored.items || [],
 		user: req.session.user || null,
 	});
@@ -321,6 +341,79 @@ exports.confirmPayment = (req, res) => {
 			return res.redirect(`/order/${orderNumber}`);
 		});
 	});
+};
+
+// POST /order/request-refund - customer initiates refund on a paid order
+exports.requestRefund = (req, res) => {
+	const orderNumber = req.body.orderNumber || (req.session.lastOrder && req.session.lastOrder.orderNumber);
+	const reason = (req.body.reason || '').toString().trim() || 'No reason provided';
+
+	if (!orderNumber) {
+		req.flash('error', 'Missing order reference.');
+		return res.redirect('/history');
+	}
+
+	const OrderModel = require('../models/order');
+	OrderModel.getOrderByNumber(orderNumber, (err, orderRow) => {
+		if (err || !orderRow) {
+			console.error('requestRefund: lookup error', err);
+			req.flash('error', 'Order not found.');
+			return res.redirect('/history');
+		}
+
+		if (!orderRow.paid) {
+			req.flash('error', 'Refunds apply to paid orders only.');
+			return res.redirect(`/order/${orderNumber}`);
+		}
+
+		OrderModel.updateOrderStatus(orderRow.id, 'refund_requested', (upErr) => {
+			if (upErr) {
+				console.error('requestRefund: update error', upErr);
+				req.flash('error', 'Could not submit refund request.');
+				return res.redirect(`/order/${orderNumber}`);
+			}
+
+			if (req.session.lastOrder && req.session.lastOrder.orderNumber === orderNumber) {
+				req.session.lastOrder.status = 'refund_requested';
+				req.session.lastOrder.refundRequestedAt = new Date().toISOString();
+				req.session.lastOrder.refundReason = reason;
+			}
+
+			console.log(`Refund requested for ${orderNumber}: ${reason}`);
+			req.flash('success', 'Refund request submitted.');
+			return res.redirect(`/order/${orderNumber}`);
+		});
+	});
+};
+
+// POST /order/resend-payment - resend instructions for unpaid orders
+exports.resendPaymentInstructions = (req, res) => {
+	const orderNumber = req.body.orderNumber || (req.session.lastOrder && req.session.lastOrder.orderNumber);
+	if (!orderNumber) {
+		req.flash('error', 'Missing order reference.');
+		return res.redirect('/history');
+	}
+
+	if (!req.session.lastOrder || req.session.lastOrder.orderNumber !== orderNumber) {
+		req.flash('error', 'Order not found in session. Please complete checkout again.');
+		return res.redirect('/history');
+	}
+
+	const order = req.session.lastOrder;
+	if (order.paid) {
+		req.flash('info', 'Order already paid. No instructions sent.');
+		return res.redirect(`/order/${orderNumber}`);
+	}
+
+	console.log('Resend payment instructions', {
+		orderNumber,
+		method: order.paymentMethod,
+		instructions: order.paymentInstructions || null,
+	});
+
+	req.session.lastOrder.paymentReminderSentAt = new Date().toISOString();
+	req.flash('success', 'Payment instructions resent (logged).');
+	return res.redirect(`/order/${orderNumber}`);
 };
 
 

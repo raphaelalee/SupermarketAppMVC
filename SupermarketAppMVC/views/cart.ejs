@@ -33,7 +33,26 @@
                 >
               </label>
               <div class="line-media">
-                <img src="/images/<%= item.image || 'broccoli.png' %>" alt="<%= item.productName %>" style="width:120px;height:120px;object-fit:contain;">
+                <% 
+                  const nameLower = (item.productName || '').toLowerCase();
+                  let fallbackImg = 'broccoli.png';
+                  if (nameLower.includes('milk')) fallbackImg = 'milk.png';
+                  else if (nameLower.includes('tea')) fallbackImg = 'green tea.webp';
+                  else if (nameLower.includes('apple')) fallbackImg = 'apples.png';
+                  else if (nameLower.includes('banana')) fallbackImg = 'bananas.png';
+                  else if (nameLower.includes('bread')) fallbackImg = 'bread.png';
+                  else if (nameLower.includes('pasta')) fallbackImg = 'pasta.png';
+                  else if (nameLower.includes('chicken')) fallbackImg = 'chicken.png';
+                  else if (nameLower.includes('prawn')) fallbackImg = 'prawn.png';
+                  else if (nameLower.includes('tomato')) fallbackImg = 'tomatoes.png';
+                  else if (nameLower.includes('orange')) fallbackImg = 'oj.png';
+                  const rawImg = (item.image || '').toString().replace(/\\\\/g,'/');
+                  let normalized = rawImg;
+                  if (normalized.startsWith('/images/')) normalized = normalized.replace(/^\/images\//, '');
+                  if (normalized.startsWith('/')) normalized = normalized.slice(1);
+                  const imgSrc = normalized ? ('/images/' + normalized) : ('/images/' + fallbackImg);
+                %>
+                <img src="<%= imgSrc %>" alt="<%= item.productName %>" style="width:120px;height:120px;object-fit:contain;" onerror="this.onerror=null;this.src='/images/<%= fallbackImg %>';">
               </div>
               <div class="line-body">
                 <div class="line-info">

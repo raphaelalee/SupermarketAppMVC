@@ -80,7 +80,11 @@ exports.renderRegister = (req, res) => {
    validations: require all fields, email contains @gmail, contact 8 digits
 ======================================== */
 exports.registerUser = (req, res) => {
-  const { username, email, password, address, contact, role } = req.body || {};
+  const { username, email, password, address, contact } = req.body || {};
+  const adminRequested =
+    req.body && (req.body.adminRole === "on" || req.body.adminRole === "1");
+  const adminCode = (req.body && req.body.adminCode) ? req.body.adminCode.trim() : "";
+  const adminPasscode = process.env.ADMIN_SIGNUP_CODE || "123";
   // enforce exact gmail domain
   const emailIsGmailCom = /@gmail\.com$/i.test(email || "");
   const phoneValid = /^\d{8}$/.test(contact || "");
@@ -121,14 +125,21 @@ exports.registerUser = (req, res) => {
     return res.redirect('/register');
   }
 
+  if (adminRequested && adminCode !== adminPasscode) {
+    req.flash('error', 'Invalid admin code.');
+    return res.redirect('/register');
+  }
+
+  const targetRole = adminRequested ? "admin" : "user";
+
   // Check if email is already taken
   Users.getByEmail(email, (err, results) => {
     if (err) { console.error("DB error:", err); req.flash("error", "Database error."); return res.redirect("/register"); }
     if (results.length > 0) { req.flash("error", "Email already registered."); return res.redirect("/register"); }
 
     const hashedPassword = bcrypt.hashSync(password, 10);
-    // Force role to 'user' regardless of submitted value
-    const newUser = { username, email, password: hashedPassword, address, contact, role: "user" };
+    // Allow admin creation only when admin code is valid
+    const newUser = { username, email, password: hashedPassword, address, contact, role: targetRole };
 
     Users.create(newUser, (err2) => {
       if (err2) { console.error("Error creating user:", err2); req.flash("error", "Registration failed."); return res.redirect("/register"); }

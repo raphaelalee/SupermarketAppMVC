@@ -21,7 +21,7 @@
               <td><%= o.orderNumber %></td>
               <td><%= new Date(o.createdAt).toLocaleString('en-SG', { hour12:false }) %></td>
               <td class="text-end">S$ <%= Number(o.total || 0).toFixed(2) %></td>
-              <td><%= o.status %></td>
+              <td class="text-capitalize"><%= o.status %></td>
               <td class="text-end"><a href="/history/<%= o.id %>" class="btn btn-sm btn-outline-success">View</a></td>
             </tr>
           <% }) %>

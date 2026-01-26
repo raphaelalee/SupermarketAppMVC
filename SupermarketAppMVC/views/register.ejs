@@ -60,7 +60,6 @@
             <% } %>
 
             <form action="/register" method="POST" id="registerForm" novalidate>
-              <input type="hidden" name="role" value="user">
 
               <div class="row">
                 <div class="col-md-6 mb-3">
@@ -123,7 +122,17 @@
 
               <!-- role is fixed to 'user' -->
 
-                <button type="submit" class="btn btn-success w-100">Register</button>
+              <div class="mb-3 form-check">
+                <input class="form-check-input" type="checkbox" value="1" id="adminRole" name="adminRole">
+                <label class="form-check-label" for="adminRole">Register as admin (code required)</label>
+              </div>
+              <div class="mb-3" id="adminCodeWrap" style="display:none;">
+                <label for="adminCode" class="form-label">Admin code</label>
+                <input type="password" name="adminCode" id="adminCode" class="form-control" placeholder="Enter admin code">
+                <div class="form-text small text-muted">Ask an existing admin for the code.</div>
+              </div>
+
+              <button type="submit" class="btn btn-success w-100">Register</button>
             </form>
 
             <div class="text-center mt-3 auth-footer">
@@ -145,6 +154,15 @@
       const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
       const gmailRegex = /@gmail\.com$/i;
 
+      const adminRole = document.getElementById('adminRole');
+      const adminCodeWrap = document.getElementById('adminCodeWrap');
+      if (adminRole) {
+        adminRole.addEventListener('change', () => {
+          if (adminRole.checked) adminCodeWrap.style.display = '';
+          else adminCodeWrap.style.display = 'none';
+        });
+      }
+
       form.addEventListener('submit', function (e) {
         if (alerts) alerts.innerHTML = '';
         const username = document.getElementById('username').value.trim();
@@ -152,6 +170,7 @@
         const password = document.getElementById('password').value;
         const address = document.getElementById('address').value.trim();
         const contact = document.getElementById('contact').value.trim();
+        const adminCode = document.getElementById('adminCode') ? document.getElementById('adminCode').value.trim() : '';
 
         const errors = [];
         // clear previous inline errors

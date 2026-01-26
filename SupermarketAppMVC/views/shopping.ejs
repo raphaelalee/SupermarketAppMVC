@@ -60,7 +60,30 @@
       <div class="products-grid">
         <% products.forEach((product) => { %>
           <article class="shopping-card">
-            <div class="card-image" style="background-image:url('/images/<%= product.image %>');"></div>
+            <%
+              const nameLower = (product.productName || '').toLowerCase();
+              let fallbackImg = 'broccoli.png';
+              if (nameLower.includes('milk')) fallbackImg = 'milk.png';
+              else if (nameLower.includes('tea')) fallbackImg = 'green tea.webp';
+              else if (nameLower.includes('broccoli')) fallbackImg = 'broccoli.png';
+              else if (nameLower.includes('apple')) fallbackImg = 'apples.png';
+              else if (nameLower.includes('banana')) fallbackImg = 'bananas.png';
+              else if (nameLower.includes('bread')) fallbackImg = 'bread.png';
+              else if (nameLower.includes('pasta')) fallbackImg = 'pasta.png';
+              else if (nameLower.includes('chicken')) fallbackImg = 'chicken.png';
+              else if (nameLower.includes('prawn')) fallbackImg = 'prawn.png';
+              else if (nameLower.includes('tomato')) fallbackImg = 'tomatoes.png';
+              const imgRaw = (product.image || '').toString().replace(/\\\\/g, '/');
+              let normalized = imgRaw;
+              if (normalized.startsWith('/images/')) normalized = normalized.replace(/^\/images\//, '');
+              if (normalized.startsWith('/')) normalized = normalized.slice(1);
+              const imgPath = normalized
+                ? ('/images/' + normalized)
+                : ('/images/' + fallbackImg);
+            %>
+            <div class="card-image">
+              <img src="<%= imgPath %>" alt="<%= product.productName %>" style="width:100%;height:100%;object-fit:contain;" onerror="this.onerror=null;this.src='/images/<%= fallbackImg %>';">
+            </div>
             <div class="card-body">
               <p class="product-category"><%= product.category %></p>
               <h5><%= product.productName %></h5>
