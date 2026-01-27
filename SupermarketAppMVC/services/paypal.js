@@ -138,7 +138,74 @@ async function captureOrder(orderId) {
   return data;
 }
 
+/**
+ * Refund a captured PayPal payment by capture ID.
+ * If `amount` is provided, performs a partial refund for that amount
+ * (currency defaults to PAYPAL_CURRENCY). Otherwise, refunds full amount.
+ * @param {string} captureId
+ * @param {object} options
+ * @param {number|string} [options.amount]
+ * @param {string} [options.currency]
+ * @param {string} [options.invoiceId]
+ */
+async function refundCapture(captureId, options = {}) {
+  if (!captureId) throw new Error("Missing captureId for refundCapture");
+
+  const accessToken = await getAccessToken();
+  const currency = options.currency || DEFAULT_CURRENCY;
+
+  let body = {};
+  if (
+    typeof options.amount !== "undefined" &&
+    options.amount !== null &&
+    options.amount !== ""
+  ) {
+    const value = Number(options.amount);
+    if (!Number.isFinite(value) || value <= 0) {
+      throw new Error(`Invalid amount for refundCapture: ${options.amount}`);
+    }
+    body.amount = {
+      currency_code: currency,
+      value: value.toFixed(2),
+    };
+  }
+
+  if (options.invoiceId) {
+    body.invoice_id = String(options.invoiceId);
+  }
+
+  // PayPal allows empty body for full refund; send {} when no fields.
+  const payload =
+    Object.keys(body).length > 0 ? JSON.stringify(body) : "{}";
+
+  const response = await fetch(
+    `${PAYPAL_API}/v2/payments/captures/${captureId}/refund`,
+    {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${accessToken}`,
+      },
+      body: payload,
+    }
+  );
+
+  const data = await response.json();
+
+  if (!response.ok) {
+    console.error("PayPal refundCapture failed", {
+      status: response.status,
+      body: data,
+      captureId,
+    });
+    throw new Error("PayPal refundCapture failed");
+  }
+
+  return data;
+}
+
 module.exports = {
   createOrder,
   captureOrder,
+  refundCapture,
 };

@@ -3,6 +3,7 @@ const util = require("util"); // Core Node.js module used to promisify callback-
 let PDFDocument = null; // Variable to hold the lazy-loaded pdfkit module (for receipt generation)
 const Order = require("../models/order"); // Model for database interaction with 'orders' table
 const Product = require("../models/supermarket"); // Model for database interaction with 'products' table
+const paypal = require("../services/paypal"); // PayPal SDK wrapper for capture/refund
 
 // Helper function to format timestamps into a localized Singapore string format (en-SG)
 const formatDateTime = (value) => {
@@ -483,6 +484,52 @@ exports.updateOrderStatus = async (req, res) => {
   }
 
   try {
+    const detail = await orderDetailAsync(orderId);
+    if (!detail || !detail.order) {
+      req.flash("error", "Order not found.");
+      return res.redirect(`/admin/orders/${orderId}`);
+    }
+
+    const order = detail.order;
+    const isPaypal =
+      String(order.paymentMethod || "").toLowerCase() === "paypal";
+    const wantsRefund = nextStatus === "refunded";
+
+    if (wantsRefund && isPaypal) {
+      const captureId =
+        order.paypalCaptureId ||
+        order.paypal_capture_id ||
+        order.paypal_captureid ||
+        null;
+
+      if (!captureId) {
+        req.flash(
+          "error",
+          "PayPal capture ID missing; cannot issue refund automatically."
+        );
+        return res.redirect(`/admin/orders/${orderId}`);
+      }
+
+      try {
+        const refund = await paypal.refundCapture(captureId, {
+          amount: order.total,
+          currency: process.env.PAYPAL_CURRENCY || "SGD",
+          invoiceId: order.orderNumber,
+        });
+        req.flash(
+          "success",
+          `PayPal refund issued successfully${refund.id ? ` (ID ${refund.id})` : ""}.`
+        );
+      } catch (err) {
+        console.error("PayPal refund failed:", err);
+        req.flash(
+          "error",
+          "PayPal refund failed. Status not changed. Please retry."
+        );
+        return res.redirect(`/admin/orders/${orderId}`);
+      }
+    }
+
     await updateStatusAsync(orderId, nextStatus); // Database update
     req.flash("success", "Order status updated.");
   } catch (err) {

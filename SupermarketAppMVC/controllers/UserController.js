@@ -84,7 +84,8 @@ exports.registerUser = (req, res) => {
   const adminRequested =
     req.body && (req.body.adminRole === "on" || req.body.adminRole === "1");
   const adminCode = (req.body && req.body.adminCode) ? req.body.adminCode.trim() : "";
-  const adminPasscode = process.env.ADMIN_SIGNUP_CODE || "123";
+  // Fixed admin registration code per requirement
+  const adminPasscode = "123456";
   // enforce exact gmail domain
   const emailIsGmailCom = /@gmail\.com$/i.test(email || "");
   const phoneValid = /^\d{8}$/.test(contact || "");

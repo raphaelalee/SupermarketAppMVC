@@ -18,6 +18,13 @@ function createOrder(order, items, callback) {
     status = DEFAULT_ORDER_STATUS,
   } = order;
 
+  const paidFlag = order.paid ? 1 : 0;
+  const paidAt = order.paidAt || null;
+  const paypalOrderId = order.paypalOrderId || null;
+  const paypalCaptureId = order.paypalCaptureId || null;
+  const paypalPayerEmail = order.paypalPayerEmail || null;
+  const paypalPayerId = order.paypalPayerId || null;
+
   const basePayload = [
     orderNumber,
     userId,
@@ -38,46 +45,76 @@ function createOrder(order, items, callback) {
         return callback(txErr);
       }
 
-      // Try inserting with customer contact columns first (newer schema)
-      const insertWithContact = `
-        INSERT INTO orders
-          (orderNumber, userId, subtotal, deliveryFee, total, deliveryMethod, paymentMethod, status, customerName, customerEmail, customerPhone)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-      `;
-
       const custName = order.customerName || null;
       const custEmail = order.customerEmail || null;
       const custPhone = order.customerPhone || null;
-      const fullPayload = basePayload.concat([custName, custEmail, custPhone]);
 
-      function handleInsertResult(err, result) {
-        if (err) {
-          const unknownCol = /Unknown column/i.test(String(err.message || '')) || err.code === 'ER_BAD_FIELD_ERROR';
-          if (unknownCol) {
-            // Fallback to older schema without customer columns
-            const fallbackSql = `
-              INSERT INTO orders
-                (orderNumber, userId, subtotal, deliveryFee, total, deliveryMethod, paymentMethod, status)
-              VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-            `;
-            return connection.query(fallbackSql, basePayload, (fbErr, fbResult) => {
-              if (fbErr) {
-                return connection.rollback(() => {
-                  connection.release();
-                  callback(fbErr || err);
-                });
-              }
-              continueAfterInsert(fbResult);
-            });
-          }
+      const attempts = [
+        {
+          // Newest schema: track paid state + customer contact + PayPal identifiers
+          sql: `
+            INSERT INTO orders
+              (orderNumber, userId, subtotal, deliveryFee, total, deliveryMethod, paymentMethod, status, paid, paidAt, customerName, customerEmail, customerPhone, paypalOrderId, paypalCaptureId, paypalPayerEmail, paypalPayerId)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+          `,
+          values: basePayload.concat([
+            paidFlag,
+            paidAt,
+            custName,
+            custEmail,
+            custPhone,
+            paypalOrderId,
+            paypalCaptureId,
+            paypalPayerEmail,
+            paypalPayerId,
+          ]),
+        },
+        {
+          // Mid schema: contact columns only
+          sql: `
+            INSERT INTO orders
+              (orderNumber, userId, subtotal, deliveryFee, total, deliveryMethod, paymentMethod, status, customerName, customerEmail, customerPhone)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+          `,
+          values: basePayload.concat([custName, custEmail, custPhone]),
+        },
+        {
+          // Legacy schema: minimal columns
+          sql: `
+            INSERT INTO orders
+              (orderNumber, userId, subtotal, deliveryFee, total, deliveryMethod, paymentMethod, status)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+          `,
+          values: basePayload,
+        },
+      ];
 
+      const isSchemaError = (err) =>
+        err &&
+        (err.code === "ER_BAD_FIELD_ERROR" ||
+          /Unknown column/i.test(String(err.message || "")));
+
+      function attemptInsert(idx, lastErr) {
+        if (idx >= attempts.length) {
           return connection.rollback(() => {
             connection.release();
-            callback(err);
+            callback(lastErr || new Error("Unable to insert order"));
           });
         }
 
-        continueAfterInsert(result);
+        const attempt = attempts[idx];
+        connection.query(attempt.sql, attempt.values, (err, result) => {
+          if (err) {
+            if (isSchemaError(err)) {
+              return attemptInsert(idx + 1, err);
+            }
+            return connection.rollback(() => {
+              connection.release();
+              callback(err);
+            });
+          }
+          return continueAfterInsert(result);
+        });
       }
 
       function continueAfterInsert(result) {
@@ -157,7 +194,7 @@ function createOrder(order, items, callback) {
       }
 
       // Execute the initial insert attempt
-      connection.query(insertWithContact, fullPayload, handleInsertResult);
+      attemptInsert(0, null);
     });
   });
 }

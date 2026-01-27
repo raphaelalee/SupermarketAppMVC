@@ -159,13 +159,36 @@ exports.processCheckout = (req, res) => {
 	if (paymentMethod === "paypal") {
 		const cap = req.session.paypalCapture;
 		const pending = req.session.paypalPending;
+		// Fallback to hidden form fields (in case session was lost between PayPal fetch calls)
+		const formOrderId = req.body.paypalOrderId || null;
+		const formCaptureId = req.body.paypalCaptureId || null;
+		const formPaidFlag = String(req.body.paypalPaid || "") === "1";
 
-		if (!cap || cap.status !== "COMPLETED") {
+		// Prefer session capture data
+		let paypalProof = null;
+		if (cap && cap.status === "COMPLETED") {
+			paypalProof = {
+				orderId: cap.orderId,
+				captureId: cap.captureId,
+				payerEmail: cap.payerEmail,
+				payerId: cap.payerId,
+			};
+		} else if (formPaidFlag && formCaptureId) {
+			// Accept form-provided proof when session capture is missing (e.g., cookie not sent on fetch)
+			paypalProof = {
+				orderId: formOrderId,
+				captureId: formCaptureId,
+				payerEmail: null,
+				payerId: null,
+			};
+		}
+
+		if (!paypalProof) {
 			req.flash("error", "PayPal payment not completed. Please pay first.");
 			return res.redirect("/checkout");
 		}
 
-		if (pending?.orderId && pending.orderId !== cap.orderId) {
+		if (pending?.orderId && pending.orderId !== paypalProof.orderId) {
 			req.flash("error", "PayPal order mismatch. Please try again.");
 			return res.redirect("/checkout");
 		}
@@ -176,12 +199,13 @@ exports.processCheckout = (req, res) => {
 		}
 
 		paid = true;
-		paidAt = new Date().toISOString();
+		// MySQL DATETIME doesn't accept the trailing 'Z'; store as 'YYYY-MM-DD HH:MM:SS'
+		paidAt = new Date().toISOString().slice(0, 19).replace('T', ' ');
 		paypalMeta = {
-			paypalOrderId: cap.orderId,
-			paypalCaptureId: cap.captureId,
-			paypalPayerEmail: cap.payerEmail,
-			paypalPayerId: cap.payerId,
+			paypalOrderId: paypalProof.orderId,
+			paypalCaptureId: paypalProof.captureId,
+			paypalPayerEmail: paypalProof.payerEmail,
+			paypalPayerId: paypalProof.payerId,
 		};
 	}
 
