@@ -82,9 +82,38 @@
   </div>
 
   <div class="inventory-grid">
+    <% 
+      const keywordImages = [
+        { k: ["green tea"], img: "green tea.webp" },
+        { k: ["milk"], img: "milk.png" },
+        { k: ["broccoli"], img: "broccoli.png" },
+        { k: ["prawn"], img: "prawn.png" },
+        { k: ["baguette","bread","loaf","sourdough"], img: "baguette.png" },
+        { k: ["juice","orange"], img: "oj.png" },
+        { k: ["pasta","fusilli","spaghetti"], img: "pasta.png" },
+        { k: ["chicken"], img: "chicken.png" },
+        { k: ["tomato"], img: "tomatoes.png" },
+        { k: ["banana"], img: "bananas.png" },
+        { k: ["apple"], img: "apples.png" }
+      ];
+
+      const pickImage = (name, current) => {
+        const raw = (current || "").trim();
+        const missing = !raw || raw === "default.png" || raw === "placeholder.png";
+        if (!missing) return raw;
+        const lower = (name || "").toLowerCase();
+        const found = keywordImages.find(entry => entry.k.some(k => lower.includes(k)));
+        return found ? found.img : "supermarket.jpg";
+      };
+    %>
+
     <% products.forEach(product => { %>
+      <% 
+        const imgFile = pickImage(product.productName, product.image);
+        const imgUrl = imgFile.startsWith('uploads/') ? `/images/${imgFile}` : `/images/${imgFile}`;
+      %>
       <article class="inventory-card">
-        <div class="card-media" style="background-image:url('/images/<%= product.image %>');"></div>
+        <div class="card-media" style="background-image:url('<%= imgUrl %>');"></div>
         <div class="info">
           <p class="card-category"><%= product.category %></p>
           <h5><%= product.productName %></h5>

@@ -80,7 +80,7 @@ exports.handleProductImageUpload = (req, res, next) => {
 };
 
 // Determines the correct image path to store in the database (new upload, existing file, or default placeholder)
-const resolveImageValue = (req, fallback = "placeholder.png") => {
+const resolveImageValue = (req, fallback = "supermarket.jpg") => {
   if (req.file && req.file.filename) {
     // If a new file was uploaded, return the relative path to the saved file
     return path.posix.join("uploads", req.file.filename);
