@@ -31,5 +31,37 @@ exports.retrievePaymentIntent = async (intentId) => {
   return stripe.paymentIntents.retrieve(intentId);
 };
 
+exports.refundPayment = async (options = {}) => {
+  const {
+    paymentIntentId = null,
+    chargeId = null,
+    amount = null, // amount in dollars
+    reason = "requested_by_customer",
+    metadata = {},
+  } = options;
+
+  if (!paymentIntentId && !chargeId) {
+    throw new Error("Missing Stripe reference (paymentIntentId or chargeId)");
+  }
+
+  const payload = {
+    reason,
+    metadata,
+  };
+
+  // Stripe rejects requests containing both payment_intent and charge.
+  // Prefer payment_intent (newer API path); fall back to charge when intent is absent.
+  if (paymentIntentId) {
+    payload.payment_intent = paymentIntentId;
+  } else if (chargeId) {
+    payload.charge = chargeId;
+  }
+  if (Number.isFinite(Number(amount))) {
+    payload.amount = dollarsToCents(amount);
+  }
+
+  return stripe.refunds.create(payload);
+};
+
 exports.dollarsToCents = dollarsToCents;
 exports.currency = DEFAULT_CURRENCY;

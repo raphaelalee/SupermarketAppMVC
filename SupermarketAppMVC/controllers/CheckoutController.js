@@ -1,6 +1,7 @@
 // controllers/CheckoutController.js
 // Session-based checkout (no DB dependency required for PayPal render)
 
+const util = require("util");
 const Order = require("../models/order");
 const UserCart = require("../models/userCart");
 const paypal = require("../services/paypal");
@@ -379,9 +380,19 @@ exports.processCheckout = async (req, res) => {
 	// paymentInstructions already built above; reuse it
 
 	const status = paid ? "paid" : "pending";
-	if (paid && !paidAt) paidAt = new Date().toISOString();
+	if (paid && !paidAt) paidAt = new Date();
 
 	function finalizeOrder() {
+		const toMysqlDateTime = (value) => {
+			if (!value) return null;
+			const d = new Date(value);
+			if (Number.isNaN(d.getTime())) return null;
+			return d.toISOString().slice(0, 19).replace("T", " ");
+		};
+
+		const paidAtMysql = paid ? toMysqlDateTime(paidAt) : null;
+		const createdAtMysql = toMysqlDateTime(new Date());
+
 		const orderPayload = {
 			orderNumber,
 			userId: req.session.user ? req.session.user.id : null,
@@ -396,8 +407,8 @@ exports.processCheckout = async (req, res) => {
 			customerEmail: (req.session.user && req.session.user.email) || (req.body.customerEmail || null),
 			customerPhone: digitsOnly ? digitsOnly.slice(-8) : null,
 			paid,
-			paidAt: paidAt || (paid ? new Date().toISOString() : null),
-			createdAt: new Date().toISOString(),
+			paidAt: paidAtMysql,
+			createdAt: createdAtMysql,
 			items,
 			paymentInstructions: paymentInstructions,
 			...(paymentMethod === "nets" && req.session.netsTxnRef ? { netsTxnRef: req.session.netsTxnRef } : {}),
@@ -442,34 +453,59 @@ exports.processCheckout = async (req, res) => {
 	}
 };
 
-exports.renderReceipt = (req, res) => {
-	const orderNumber = req.params.orderNumber;
-	const stored = req.session.lastOrder;
+const getOrderByNumberAsync = util.promisify(Order.getOrderByNumber);
+const getOrderWithItemsAsync = util.promisify(Order.getOrderWithItems);
 
-	if (!stored || stored.orderNumber !== orderNumber) {
-		req.flash("error", "Order not found. Complete a checkout first.");
+exports.renderReceipt = async (req, res) => {
+	const orderNumber = req.params.orderNumber;
+	let stored = req.session.lastOrder;
+
+	try {
+		// If session copy is missing or does not match, fall back to DB lookup
+		if (!stored || stored.orderNumber !== orderNumber) {
+			const row = await getOrderByNumberAsync(orderNumber);
+			if (!row) {
+				req.flash("error", "Order not found. Complete a checkout first.");
+				return res.redirect("/shopping");
+			}
+
+			// Optional ownership check: allow guest orders (no userId) or matching user
+			if (row.userId && req.session.user?.id && row.userId !== req.session.user.id) {
+				req.flash("error", "Order not found for your account.");
+				return res.redirect("/history");
+			}
+
+			const detail = await getOrderWithItemsAsync(row.id);
+			stored = {
+				...(detail?.order || row),
+				items: detail?.items || [],
+			};
+		}
+
+		const maskedEmail = stored.customerEmail
+			? (() => {
+					const parts = String(stored.customerEmail).split("@");
+					if (parts.length !== 2) return "****";
+					const [user, domain] = parts;
+					if (user.length <= 2) return `${user[0] || ""}*@${domain}`;
+					return `${user[0]}***${user[user.length - 1]}@${domain}`;
+			  })()
+			: null;
+
+		const maskedPhone = stored.customerPhone
+			? `****${String(stored.customerPhone).slice(-4)}`
+			: null;
+
+		res.render("receipt", {
+			order: { ...stored, maskedEmail, maskedPhone },
+			items: stored.items || [],
+			user: req.session.user || null,
+		});
+	} catch (err) {
+		console.error("renderReceipt failed:", err);
+		req.flash("error", "Unable to load order receipt right now.");
 		return res.redirect("/shopping");
 	}
-
-	res.render("receipt", {
-		order: {
-			...stored,
-			maskedEmail: stored.customerEmail
-				? (function mask(email){
-						const parts = String(email).split("@");
-						if (parts.length !== 2) return "****";
-						const [user, domain] = parts;
-						if (user.length <= 2) return `${user[0] || ""}*@${domain}`;
-						return `${user[0]}***${user[user.length - 1]}@${domain}`;
-				  })(stored.customerEmail)
-				: null,
-			maskedPhone: stored.customerPhone
-				? `****${String(stored.customerPhone).slice(-4)}`
-				: null,
-		},
-		items: stored.items || [],
-		user: req.session.user || null,
-	});
 };
 
 // POST /order/confirm-payment

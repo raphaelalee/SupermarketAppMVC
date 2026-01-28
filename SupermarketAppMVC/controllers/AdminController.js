@@ -4,6 +4,7 @@ let PDFDocument = null; // Variable to hold the lazy-loaded pdfkit module (for r
 const Order = require("../models/order"); // Model for database interaction with 'orders' table
 const Product = require("../models/supermarket"); // Model for database interaction with 'products' table
 const paypal = require("../services/paypal"); // PayPal SDK wrapper for capture/refund
+const stripeSvc = require("../services/stripe"); // Stripe SDK wrapper for payments/refunds
 
 // Helper function to format timestamps into a localized Singapore string format (en-SG)
 const formatDateTime = (value) => {
@@ -21,7 +22,15 @@ const LOW_STOCK_LIMIT = 5;
 const RECENT_ORDERS_LIMIT = 5;
 const DAILY_SALES_DAYS = 7;
 const SALES_HOURS_WINDOW = 24;
-const ORDER_STATUSES = ["pending", "paid", "processing", "completed", "refund_requested", "refunded"]; // Include paid/refund states
+const ORDER_STATUSES = [
+  "pending",
+  "paid",
+  "processing",
+  "completed",
+  "refund_requested",
+  "refund_rejected",
+  "refunded",
+]; // Include paid/refund states
 const DEFAULT_STATUS = ORDER_STATUSES[0];
 
 // ======================================
@@ -493,7 +502,16 @@ exports.updateOrderStatus = async (req, res) => {
     const order = detail.order;
     const isPaypal =
       String(order.paymentMethod || "").toLowerCase() === "paypal";
+    const isStripe =
+      String(order.paymentMethod || "").toLowerCase() === "stripe";
     const wantsRefund = nextStatus === "refunded";
+    const refundAmountRaw = Number(req.body.refundAmount || order.total || 0);
+    const refundReasonText = (req.body.refundReason || "").toString().trim();
+
+    const refundAmount =
+      Number.isFinite(refundAmountRaw) && refundAmountRaw > 0
+        ? Math.min(refundAmountRaw, Number(order.total || refundAmountRaw))
+        : Number(order.total || 0);
 
     if (wantsRefund && isPaypal) {
       const captureId =
@@ -512,9 +530,10 @@ exports.updateOrderStatus = async (req, res) => {
 
       try {
         const refund = await paypal.refundCapture(captureId, {
-          amount: order.total,
+          amount: refundAmount,
           currency: process.env.PAYPAL_CURRENCY || "SGD",
           invoiceId: order.orderNumber,
+          note: refundReasonText || undefined,
         });
         req.flash(
           "success",
@@ -525,6 +544,52 @@ exports.updateOrderStatus = async (req, res) => {
         req.flash(
           "error",
           "PayPal refund failed. Status not changed. Please retry."
+        );
+        return res.redirect(`/admin/orders/${orderId}`);
+      }
+    }
+
+    if (wantsRefund && isStripe) {
+      const paymentIntentId =
+        order.stripePaymentIntentId ||
+        order.stripe_payment_intent_id ||
+        order.stripe_paymentintent_id ||
+        null;
+      const chargeId =
+        order.stripeChargeId ||
+        order.stripe_charge_id ||
+        order.stripe_chargeid ||
+        null;
+
+      if (!paymentIntentId && !chargeId) {
+        req.flash(
+          "error",
+          "Stripe payment reference missing; cannot issue refund automatically."
+        );
+        return res.redirect(`/admin/orders/${orderId}`);
+      }
+
+      try {
+        const refund = await stripeSvc.refundPayment({
+          paymentIntentId,
+          chargeId,
+          amount: refundAmount,
+          metadata: {
+            orderNumber: order.orderNumber || order.ordernumber,
+            reason: refundReasonText || "admin_refund",
+          },
+        });
+        req.flash(
+          "success",
+          `Stripe refund ${refund.status || "submitted"}${
+            refund.id ? ` (ID ${refund.id})` : ""
+          }.`
+        );
+      } catch (err) {
+        console.error("Stripe refund failed:", err);
+        req.flash(
+          "error",
+          "Stripe refund failed. Status not changed. Please retry."
         );
         return res.redirect(`/admin/orders/${orderId}`);
       }

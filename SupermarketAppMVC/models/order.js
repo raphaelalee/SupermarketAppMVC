@@ -24,6 +24,21 @@ function createOrder(order, items, callback) {
   const paypalCaptureId = order.paypalCaptureId || null;
   const paypalPayerEmail = order.paypalPayerEmail || null;
   const paypalPayerId = order.paypalPayerId || null;
+  const stripePaymentIntentId =
+    order.stripePaymentIntentId ||
+    order.stripe_payment_intent_id ||
+    order.stripePaymentId ||
+    null;
+  const stripeChargeId =
+    order.stripeChargeId ||
+    order.stripe_charge_id ||
+    order.stripeCharge ||
+    null;
+  const stripeAmount = Number.isFinite(Number(order.stripeAmount))
+    ? Number(order.stripeAmount)
+    : null;
+  const stripeCurrency = order.stripeCurrency || order.stripe_currency || null;
+  const stripeStatus = order.stripeStatus || order.stripe_status || null;
 
   const basePayload = [
     orderNumber,
@@ -50,6 +65,30 @@ function createOrder(order, items, callback) {
       const custPhone = order.customerPhone || null;
 
       const attempts = [
+        {
+          // Newest schema: track stripe + paypal + paid/contact
+          sql: `
+            INSERT INTO orders
+              (orderNumber, userId, subtotal, deliveryFee, total, deliveryMethod, paymentMethod, status, paid, paidAt, customerName, customerEmail, customerPhone, paypalOrderId, paypalCaptureId, paypalPayerEmail, paypalPayerId, stripePaymentIntentId, stripeChargeId, stripeAmount, stripeCurrency, stripeStatus)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+          `,
+          values: basePayload.concat([
+            paidFlag,
+            paidAt,
+            custName,
+            custEmail,
+            custPhone,
+            paypalOrderId,
+            paypalCaptureId,
+            paypalPayerEmail,
+            paypalPayerId,
+            stripePaymentIntentId,
+            stripeChargeId,
+            stripeAmount,
+            stripeCurrency,
+            stripeStatus,
+          ]),
+        },
         {
           // Newest schema: track paid state + customer contact + PayPal identifiers
           sql: `
