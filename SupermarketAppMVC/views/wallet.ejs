@@ -2,7 +2,7 @@
 
 <section class="container py-5">
   <header class="mb-4">
-    <a href="javascript:history.back()" class="btn btn-link text-decoration-none px-0 mb-2">&larr; Back</a>
+    <a id="wallet-back" href="/checkout" class="btn btn-link text-decoration-none px-0 mb-2">&larr; Back</a>
     <p class="text-muted small mb-1">Digital wallet</p>
     <h1 class="mb-1">FreshMart wallet</h1>
     <p class="text-muted mb-0">Top up from bank, card, PayNow/NETS; spend in one tap at checkout.</p>
@@ -201,6 +201,21 @@
     updateUI();
 
     // For NETS top-up, keep normal form submit to /wallet/nets/qr
+  })();
+</script>
+
+<script>
+  (function() {
+    const btn = document.getElementById('wallet-back');
+    if (!btn) return;
+    btn.addEventListener('click', function (e) {
+      e.preventDefault();
+      if (window.history.length > 1) {
+        window.history.back();
+      } else {
+        window.location.href = btn.getAttribute('href') || '/checkout';
+      }
+    });
   })();
 </script>
 
