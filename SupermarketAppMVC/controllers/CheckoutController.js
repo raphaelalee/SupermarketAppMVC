@@ -4,6 +4,7 @@
 const Order = require("../models/order");
 const UserCart = require("../models/userCart");
 const paypal = require("../services/paypal");
+const stripeSvc = require("../services/stripe");
 
 
 
@@ -22,6 +23,8 @@ exports.renderCheckout = (req, res) => {
 		user: req.session.user || null,
 		paypalClientId: process.env.PAYPAL_CLIENT_ID,
 		paypalCurrency: process.env.PAYPAL_CURRENCY || "SGD",
+		stripePublishableKey: process.env.STRIPE_PUBLISHABLE_KEY || null,
+		stripeCurrency: (process.env.STRIPE_CURRENCY || "SGD").toUpperCase(),
 	});
 };
 
@@ -112,7 +115,59 @@ exports.capturePaypalOrder = async (req, res) => {
 	}
 };
 
-exports.processCheckout = (req, res) => {
+/**
+ * POST /stripe/create-payment-intent
+ * Creates a PaymentIntent using server-side cart and returns client secret.
+ */
+exports.createStripePaymentIntent = async (req, res) => {
+	try {
+		const items = res.locals.cartDetailed || [];
+		if (!items || !items.length) return res.status(400).json({ error: "Cart is empty" });
+
+		const deliveryFee = parseFloat(req.body.deliveryFee || 0);
+		const allowedFees = [0, 3.5, 6.0];
+		if (!Number.isFinite(deliveryFee) || deliveryFee < 0) {
+			return res.status(400).json({ error: "Invalid delivery fee" });
+		}
+		const safeDeliveryFee = Number(deliveryFee.toFixed(2));
+		if (!allowedFees.includes(safeDeliveryFee)) {
+			return res.status(400).json({ error: "Unsupported delivery option" });
+		}
+
+		const subtotal = items.reduce((sum, i) => {
+			const line = typeof i.subtotal === "number" ? i.subtotal : (Number(i.price || 0) * Number(i.qty || 0));
+			return sum + (Number(line) || 0);
+		}, 0);
+
+		const total = subtotal + safeDeliveryFee;
+
+		const intent = await stripeSvc.createPaymentIntent(total, {
+			userId: req.session.user ? req.session.user.id : "guest",
+			source: "checkout",
+		});
+
+		if (req.session) {
+			req.session.stripePending = {
+				intentId: intent.id,
+				amount: intent.amount,
+				total: Number(total.toFixed(2)),
+				createdAt: Date.now(),
+			};
+		}
+
+		return res.json({
+			clientSecret: intent.client_secret,
+			intentId: intent.id,
+			amount: intent.amount,
+			currency: intent.currency,
+		});
+	} catch (err) {
+		console.error("createStripePaymentIntent error:", err);
+		return res.status(500).json({ error: "Failed to create payment intent" });
+	}
+};
+
+exports.processCheckout = async (req, res) => {
 	const items = res.locals.cartDetailed || [];
 
 	if (!items || !items.length) {
@@ -121,7 +176,15 @@ exports.processCheckout = (req, res) => {
 	}
 
 	const deliveryMethod = req.body.deliveryMethod || "standard";
-	const deliveryFee = parseFloat(req.body.deliveryFee || 0);
+	const allowedFees = [0, 3.5, 6.0];
+	let deliveryFee = parseFloat(req.body.deliveryFee || 0);
+	if (!Number.isFinite(deliveryFee)) deliveryFee = 0;
+	const safeDeliveryFee = Number(deliveryFee.toFixed(2));
+	if (!allowedFees.includes(safeDeliveryFee)) {
+		req.flash("error", "Unsupported delivery option.");
+		return res.redirect("/checkout");
+	}
+	deliveryFee = safeDeliveryFee;
 
 	const rawPhone = (req.body.shippingPhone || "").toString();
 	const digitsOnly = rawPhone.replace(/\D/g, "");
@@ -146,6 +209,7 @@ exports.processCheckout = (req, res) => {
 	// PayPal will be validated separately below.
 	let paid = false;
 	let paypalMeta = null;
+	let stripeMeta = null;
 	let paidAt = null;
 	if (paymentMethod === 'card') paid = true;
 
@@ -269,6 +333,48 @@ exports.processCheckout = (req, res) => {
 		};
 	}
 
+	if (paymentMethod === "stripe") {
+		const intentId = req.body.stripePaymentIntentId || null;
+		if (!intentId) {
+			req.flash("error", "Stripe payment not completed. Please pay first.");
+			return res.redirect("/checkout");
+		}
+
+		try {
+			const intent = await stripeSvc.retrievePaymentIntent(intentId);
+			const status = intent?.status;
+			if (status !== "succeeded") {
+				req.flash("error", "Stripe payment not completed. Please try again.");
+				return res.redirect("/checkout");
+			}
+
+			const pending = req.session?.stripePending || null;
+			const centsTotal = Math.round(total * 100);
+			if (pending?.intentId && pending.intentId !== intentId) {
+				req.flash("error", "Stripe payment mismatch. Please try again.");
+				return res.redirect("/checkout");
+			}
+			if (Number(intent.amount) !== centsTotal) {
+				req.flash("error", "Payment amount mismatch. Please pay again.");
+				return res.redirect("/checkout");
+			}
+
+			paid = true;
+			paidAt = new Date(intent.created * 1000).toISOString().slice(0, 19).replace("T", " ");
+			stripeMeta = {
+				stripePaymentIntentId: intent.id,
+				stripeAmount: intent.amount,
+				stripeCurrency: intent.currency,
+				stripeStatus: status,
+				stripeChargeId: intent.latest_charge || null,
+			};
+		} catch (err) {
+			console.error("Stripe verify error:", err);
+			req.flash("error", "Could not verify Stripe payment. Please try again.");
+			return res.redirect("/checkout");
+		}
+	}
+
 	// Build payment instructions for non-immediate methods
 	// paymentInstructions already built above; reuse it
 
@@ -296,6 +402,7 @@ exports.processCheckout = (req, res) => {
 			paymentInstructions: paymentInstructions,
 			...(paymentMethod === "nets" && req.session.netsTxnRef ? { netsTxnRef: req.session.netsTxnRef } : {}),
 			...(paypalMeta ? paypalMeta : {}),
+			...(stripeMeta ? stripeMeta : {}),
 		};
 
 		Order.createOrder(orderPayload, items, (err, orderId) => {
@@ -316,6 +423,7 @@ exports.processCheckout = (req, res) => {
 			req.session.netsPaid = null;
 			req.session.netsTxnRef = null;
 			req.session.pendingNetsCheckout = null;
+			req.session.stripePending = null;
 			req.session.walletPaidAmount = null;
 
 			if (req.session.user?.id) {

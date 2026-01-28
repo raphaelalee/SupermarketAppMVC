@@ -554,6 +554,8 @@ app.get("/order/:orderNumber", CheckoutController.renderReceipt);
 // PayPal
 app.post("/paypal/create-order", CheckoutController.createPaypalOrder);
 app.post("/paypal/capture-order", CheckoutController.capturePaypalOrder);
+// Stripe
+app.post("/stripe/create-payment-intent", CheckoutController.createStripePaymentIntent);
 
 app.get("/wallet", requireLogin, WalletController.walletPage);
 app.post("/wallet/topup", requireLogin, WalletController.topup);

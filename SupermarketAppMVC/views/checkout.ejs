@@ -22,6 +22,10 @@
           <!-- Wallet -->
           <input type="hidden" name="walletPaid" id="walletPaid" value="0">
 
+          <!-- Stripe -->
+          <input type="hidden" name="stripePaymentIntentId" id="stripePaymentIntentId" value="">
+          <input type="hidden" name="stripePaid" id="stripePaid" value="0">
+
           <!-- OTP required flag -->
           <input type="hidden" name="otpRequired" id="otpRequired" value="0">
 
@@ -107,8 +111,8 @@
               <div class="col-12">
 
                 <label class="d-flex align-items-center mb-2">
-                  <input type="radio" name="payment" value="card" checked>
-                  <div class="ms-2">Card (placeholder)</div>
+                  <input type="radio" name="payment" value="stripe" checked>
+                  <div class="ms-2">Stripe (card / GrabPay / Alipay)</div>
                 </label>
 
                 <label class="d-flex align-items-center mb-2">
@@ -153,6 +157,14 @@
                 <div id="paypal-wrap" style="display:none; margin-top:10px;">
                   <div id="paypal-error" style="display:none;color:#b00020;margin-bottom:8px"></div>
                   <div id="paypal-button-container"></div>
+                </div>
+
+                <!-- Stripe Elements UI -->
+                <div id="stripe-card-wrap" class="p-3 bg-light rounded border" style="display:none; margin-top:10px;">
+                  <div class="fw-semibold mb-2">Pay by card, GrabPay, Alipay, etc.</div>
+                  <div id="stripe-payment-element"></div>
+                  <div id="stripe-card-errors" class="text-danger small mt-2" role="alert"></div>
+                  <div class="text-muted small mt-2">Stripe shows every payment method you enabled for this currency (card, GrabPay, Alipay, …).</div>
                 </div>
 
               </div>
@@ -223,6 +235,8 @@
 
 <!-- PayPal SDK -->
 <script src="https://www.paypal.com/sdk/js?client-id=<%= paypalClientId %>&currency=<%= paypalCurrency %>"></script>
+<!-- Stripe JS -->
+<script src="https://js.stripe.com/v3/"></script>
 
 <script>
   (function(){
@@ -240,6 +254,12 @@
     const paypalPaidEl = document.getElementById('paypalPaid');
     const paypalCaptureIdEl = document.getElementById('paypalCaptureId');
     const otpRequiredEl = document.getElementById('otpRequired');
+    const stripeIntentIdEl = document.getElementById('stripePaymentIntentId');
+    const stripePaidEl = document.getElementById('stripePaid');
+    const stripeCardWrap = document.getElementById('stripe-card-wrap');
+    const stripeCardErrors = document.getElementById('stripe-card-errors');
+    const stripePublishableKey = "<%= stripePublishableKey || '' %>" || null;
+    const stripeCurrency = ("<%= stripeCurrency || 'SGD' %>" || 'SGD').toLowerCase();
 
     const checkoutForm = document.getElementById('checkout-form');
     const completeBtn = document.getElementById('complete-order-btn');
@@ -282,6 +302,20 @@
 
     deliveryRadios.forEach(r => r.addEventListener('change', updateDelivery));
     updateDelivery();
+    // If user is on Stripe, refresh Payment Element when delivery fee changes so total stays in sync
+    deliveryRadios.forEach(r => r.addEventListener('change', () => {
+      const selPay = Array.from(paymentRadios).find(x => x.checked);
+      if (selPay && selPay.value === 'stripe') {
+        stripeClientSecret = null;
+        stripePaymentElement = null;
+        stripeElements = null;
+        if (stripePaymentContainer) stripePaymentContainer.innerHTML = '';
+        initStripeElement().catch(err => {
+          console.error(err);
+          if (stripeCardErrors) stripeCardErrors.textContent = err.message || 'Stripe not available.';
+        });
+      }
+    }));
 
     function setPaypalError(msg){
       if (!paypalError) return;
@@ -298,6 +332,116 @@
     let paypalRendered = false;
     let isSubmitting = false;
     let creatingOrder = false;
+    let stripe = null;
+    let stripeElements = null;
+    let stripePaymentElement = null;
+    let stripeProcessing = false;
+    const stripePaymentContainer = document.getElementById('stripe-payment-element');
+    let stripeClientSecret = null;
+    let stripeReturnHandled = false;
+
+    function ensureStripeElement(){
+      if (!stripePublishableKey) {
+        console.warn('Stripe publishable key missing.');
+        return false;
+      }
+      if (typeof Stripe === 'undefined') {
+        console.error('Stripe.js failed to load.');
+        if (stripeCardErrors) stripeCardErrors.textContent = 'Stripe failed to load. Please choose another method.';
+        return false;
+      }
+      if (!stripe) stripe = Stripe(stripePublishableKey);
+      // elements will be created after we fetch a clientSecret
+      if (stripeCardWrap) stripeCardWrap.style.display = 'block';
+      return true;
+    }
+
+    function setButtonLoading(isLoading) {
+      if (!completeBtn) return;
+      completeBtn.disabled = isLoading;
+      completeBtn.textContent = isLoading ? 'Processing…' : 'Complete Order';
+    }
+
+    // Persist and restore shipping/delivery so redirect flows keep data
+    function saveCheckoutDraft(){
+      try {
+        const data = {
+          delivery: Array.from(deliveryRadios).find(r=>r.checked)?.value || 'standard',
+          shippingName: document.querySelector('input[name=\"shippingName\"]')?.value || '',
+          shippingPhone: document.getElementById('shippingPhone')?.value || '',
+          shippingAddress: document.querySelector('textarea[name=\"shippingAddress\"]')?.value || '',
+        };
+        sessionStorage.setItem('checkoutDraft', JSON.stringify(data));
+      } catch(e){ /* ignore */ }
+    }
+    function restoreCheckoutDraft(){
+      try {
+        const raw = sessionStorage.getItem('checkoutDraft');
+        if (!raw) return;
+        const data = JSON.parse(raw);
+        if (data.delivery) {
+          const r = Array.from(deliveryRadios).find(x=>x.value===data.delivery);
+          if (r) { r.checked = true; updateDelivery(); }
+        }
+        if (data.shippingName) {
+          const el = document.querySelector('input[name=\"shippingName\"]');
+          if (el) el.value = data.shippingName;
+        }
+        if (data.shippingPhone) {
+          const el = document.getElementById('shippingPhone');
+          if (el) el.value = data.shippingPhone;
+        }
+        if (data.shippingAddress) {
+          const el = document.querySelector('textarea[name=\"shippingAddress\"]');
+          if (el) el.value = data.shippingAddress;
+        }
+      } catch(e){ /* ignore */ }
+    }
+
+    async function initStripeElement(){
+      if (!ensureStripeElement()) throw new Error('Stripe not available.');
+
+      const selDelivery = Array.from(deliveryRadios).find(r => r.checked);
+      const fee = selDelivery ? Number(selDelivery.dataset.fee || 0) : 0;
+      const shippingName = document.querySelector('input[name="shippingName"]')?.value || '';
+      const shippingPhone = document.getElementById('shippingPhone')?.value || '';
+
+      const resp = await fetch('/stripe/create-payment-intent', {
+        method: 'POST',
+        credentials: 'same-origin',
+        headers: {'Content-Type':'application/json'},
+        body: JSON.stringify({
+          deliveryFee: fee.toFixed(2),
+          items: __clientCartItems,
+          subtotal: __clientCartSubtotal,
+          shippingName
+        })
+      });
+
+      const data = await resp.json().catch(() => ({}));
+      if (!resp.ok || !data.clientSecret) {
+        throw new Error(data?.error || 'Unable to start Stripe payment.');
+      }
+
+      stripeClientSecret = data.clientSecret;
+      if (stripeIntentIdEl) stripeIntentIdEl.value = data.intentId || '';
+
+      stripeElements = stripe.elements({ clientSecret: data.clientSecret });
+      if (stripePaymentContainer) stripePaymentContainer.innerHTML = '';
+      stripePaymentElement = stripeElements.create('payment', {
+        layout: {
+          type: 'accordion', // avoids horizontal overflow/dropdown on smaller widths
+          defaultCollapsed: false
+        },
+        defaultValues: {
+          billingDetails: {
+            name: shippingName || undefined,
+            phone: shippingPhone || undefined,
+          }
+        }
+      });
+      stripePaymentElement.mount('#stripe-payment-element');
+    }
 
     function maybeRenderPaypal(){
       if (paypalRendered) return;
@@ -412,17 +556,79 @@
         });
     }
 
+    async function handleStripePayment(){
+      stripePaidEl.value = '0';
+      if (!stripePaymentElement || !stripeClientSecret) {
+        await initStripeElement(); // build once so user choice (PayNow) is respected
+      }
+      saveCheckoutDraft();
+      const confirmRes = await stripe.confirmPayment({
+        elements: stripeElements,
+        confirmParams: {
+          return_url: window.location.origin + '/checkout', // stays on-page for this demo
+        },
+        redirect: 'if_required' // keep AJAX style when possible
+      });
+
+      if (confirmRes.error) {
+        throw new Error(confirmRes.error.message || 'Card was declined.');
+      }
+
+      const pi = confirmRes.paymentIntent;
+      if (!pi || (pi.status !== 'succeeded' && pi.status !== 'requires_capture')) {
+        throw new Error('Payment not completed yet.');
+      }
+
+      stripePaidEl.value = '1';
+      return pi;
+    }
+
+    async function handleStripeReturn(){
+      if (stripeReturnHandled) return;
+      const params = new URLSearchParams(window.location.search);
+      const clientSecret = params.get('payment_intent_client_secret');
+      const intentId = params.get('payment_intent');
+      if (!clientSecret || !intentId || !stripePublishableKey) return;
+      stripeReturnHandled = true;
+      try {
+        if (!stripe) stripe = Stripe(stripePublishableKey);
+        const {paymentIntent} = await stripe.retrievePaymentIntent(clientSecret);
+        if (paymentIntent && paymentIntent.status === 'succeeded') {
+          restoreCheckoutDraft();
+          const stripeRadio = Array.from(paymentRadios).find(r => r.value === 'stripe');
+          if (stripeRadio) stripeRadio.checked = true;
+          stripeIntentIdEl.value = paymentIntent.id;
+          stripePaidEl.value = '1';
+          otpRequiredEl.value = '0';
+          // remove query params to avoid loops
+          const url = new URL(window.location.href);
+          url.searchParams.delete('payment_intent');
+          url.searchParams.delete('payment_intent_client_secret');
+          url.searchParams.delete('redirect_status');
+          window.history.replaceState({}, document.title, url.toString());
+          checkoutForm.submit();
+        } else if (paymentIntent && paymentIntent.status === 'requires_payment_method') {
+          if (stripeCardErrors) stripeCardErrors.textContent = 'Payment failed. Please try again with another method.';
+        }
+      } catch(err){
+        console.error('Stripe return handling failed', err);
+        if (stripeCardErrors) stripeCardErrors.textContent = err.message || 'Unable to verify Stripe payment.';
+      }
+    }
+
     // Payment change UI
     paymentRadios.forEach(r => r.addEventListener('change', () => {
       const sel = Array.from(paymentRadios).find(x => x.checked);
       const isPaypal = sel && sel.value === 'paypal';
       const isNets = sel && sel.value === 'nets';
       const isWallet = sel && sel.value === 'wallet';
+      const isStripe = sel && sel.value === 'stripe';
 
       if (paypalWrap) paypalWrap.style.display = isPaypal ? 'block' : 'none';
       if (netsHint) netsHint.style.display = isNets ? 'block' : 'none';
       const walletInfo = document.getElementById('wallet-info');
       if (walletInfo) walletInfo.style.display = isWallet ? 'block' : 'none';
+      if (stripeCardWrap) stripeCardWrap.style.display = isStripe ? 'block' : 'none';
 
       if (isPaypal) {
         paypalPaidEl.value = '0';
@@ -431,14 +637,28 @@
       } else {
         otpRequiredEl.value = '0';
       }
+
+      if (isStripe) {
+        stripePaidEl.value = '0';
+        // build the element now so user can pick PayNow/GrabPay before submit
+        stripeClientSecret = null;
+        stripePaymentElement = null;
+        stripeElements = null;
+        if (stripePaymentContainer) stripePaymentContainer.innerHTML = '';
+        initStripeElement().catch(err => {
+          console.error(err);
+          if (stripeCardErrors) stripeCardErrors.textContent = err.message || 'Stripe not available.';
+        });
+      }
     }));
 
     // ✅ NETS redirect (Option A) + PayPal guard
-    checkoutForm.addEventListener('submit', function(e){
+    checkoutForm.addEventListener('submit', async function(e){
       const sel = Array.from(paymentRadios).find(x => x.checked);
       const isPaypal = sel && sel.value === 'paypal';
       const isNets = sel && sel.value === 'nets';
       const isWallet = sel && sel.value === 'wallet';
+      const isStripe = sel && sel.value === 'stripe';
 
       if (isNets) {
         // Allow normal POST /checkout so server can create order/session then redirect
@@ -457,6 +677,32 @@
 
       // For wallet, let the normal POST /checkout run; server debits wallet synchronously.
 
+      if (isStripe) {
+        if (!checkoutForm.checkValidity()) {
+          e.preventDefault();
+          e.stopPropagation();
+          checkoutForm.reportValidity();
+          return;
+        }
+        e.preventDefault();
+        e.stopPropagation();
+        if (stripeCardErrors) stripeCardErrors.textContent = '';
+        if (stripeProcessing) return;
+        stripeProcessing = true;
+        setButtonLoading(true);
+        try {
+          await handleStripePayment();
+          otpRequiredEl.value = '0';
+          checkoutForm.submit();
+        } catch(err) {
+          console.error(err);
+          if (stripeCardErrors) stripeCardErrors.textContent = err.message || 'Stripe payment failed.';
+          stripePaidEl.value = '0';
+          setButtonLoading(false);
+          stripeProcessing = false;
+        }
+        return;
+      }
 
       if (isPaypal && paypalPaidEl && paypalPaidEl.value !== '1') {
         e.preventDefault();
@@ -469,14 +715,19 @@
 
     // Initial state
     (function initPaymentUI(){
+      restoreCheckoutDraft();
       const sel = Array.from(paymentRadios).find(x => x.checked);
       const isPaypal = sel && sel.value === 'paypal';
       const isNets = sel && sel.value === 'nets';
       const isWallet = sel && sel.value === 'wallet';
+      const isStripe = sel && sel.value === 'stripe';
       if (paypalWrap) paypalWrap.style.display = isPaypal ? 'block' : 'none';
       if (netsHint) netsHint.style.display = isNets ? 'block' : 'none';
       const walletInfo = document.getElementById('wallet-info');
       if (walletInfo) walletInfo.style.display = isWallet ? 'block' : 'none';
+      if (stripeCardWrap) stripeCardWrap.style.display = isStripe ? 'block' : 'none';
+      if (isStripe) ensureStripeElement();
+      handleStripeReturn();
     })();
 
   })();
