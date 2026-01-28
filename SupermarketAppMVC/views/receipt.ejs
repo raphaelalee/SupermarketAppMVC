@@ -37,7 +37,8 @@
           <% } else { %>
             <p class="mb-0 small text-warning">Payment pending</p>
           <% } %>
-          <p class="text-muted small mb-0">Payment method: <%= (order.paymentMethod || 'PayNow').toUpperCase() %></p>
+          <% function prettyMethod(m){ if(!m) return 'PAYNOW'; const mm = m.toLowerCase(); if (mm==='wallet') return 'FRESHMART WALLET'; if (mm==='nets') return 'NETS QR'; return mm.toUpperCase(); } %>
+          <p class="text-muted small mb-0">Payment method: <%= prettyMethod(order.paymentMethod) %></p>
         </div>
       </div>
       <div class="col-md-6">

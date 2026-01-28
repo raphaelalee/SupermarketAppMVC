@@ -1,36 +1,207 @@
 <%- include('partials/header') %>
 
 <section class="container py-5">
-  <h1 class="mb-3">Wallet / PayPal</h1>
-  <p class="text-muted">Quick access to your PayPal sandbox dashboard and recent PayPal transactions recorded by this site.</p>
+  <header class="mb-4">
+    <a href="javascript:history.back()" class="btn btn-link text-decoration-none px-0 mb-2">&larr; Back</a>
+    <p class="text-muted small mb-1">Digital wallet</p>
+    <h1 class="mb-1">FreshMart wallet</h1>
+    <p class="text-muted mb-0">Top up from bank, card, PayNow/NETS; spend in one tap at checkout.</p>
+  </header>
 
-  <div class="card p-3 mb-3">
-    <h5 class="mb-2">PayPal Sandbox</h5>
-    <p class="mb-2">Open the sandbox dashboard to view balances and activity (login with your sandbox buyer or business account):</p>
-    <a class="btn btn-outline-primary" href="<%= sandboxDashboard %>" target="_blank" rel="noreferrer">Open PayPal Sandbox Dashboard</a>
-  </div>
-
-  <div class="card p-3">
-    <h5 class="mb-3">Recent PayPal Transactions (site records)</h5>
-    <% if (transactions && transactions.length) { %>
-      <div class="list-group">
-        <% transactions.forEach(function(tx){ %>
-          <div class="list-group-item d-flex justify-content-between align-items-center">
-            <div>
-              <div><strong><%= tx.orderNumber %></strong> • <small class="text-muted"><%= tx.paymentMethod %></small></div>
-              <div class="text-muted small">Placed: <%= tx.createdAt %></div>
-            </div>
-            <div class="text-end">
-              <div><strong>S$ <%= Number(tx.total||0).toFixed(2) %></strong></div>
-              <div class="small text-success"><%= tx.paid ? 'Paid' : 'Pending' %></div>
-            </div>
-          </div>
-        <% }) %>
+  <div class="row g-4">
+    <!-- Balance + actions -->
+    <div class="col-lg-5">
+      <div class="p-4 rounded-4" style="background:#f9c074;">
+        <p class="text-white-50 small mb-1">wallet balance</p>
+        <h2 class="fw-bold text-white">S$ <%= Number(balance || 0).toFixed(2) %></h2>
+        <div class="d-flex gap-2 mt-3">
+          <button class="btn btn-light flex-fill fw-semibold" data-bs-toggle="modal" data-bs-target="#topupModal">
+            <i class="bi bi-wallet2"></i> Top up
+          </button>
+          <button class="btn btn-outline-light flex-fill fw-semibold" disabled>
+            <i class="bi bi-arrow-left-right"></i> Transfer
+          </button>
+        </div>
       </div>
-    <% } else { %>
-      <p class="text-muted">No PayPal transactions recorded yet.</p>
-    <% } %>
+
+      <div class="card shadow-sm border-0 mt-3">
+        <div class="card-body d-flex justify-content-between align-items-center">
+          <div>
+            <div class="fw-semibold">Spend & Balance Limits</div>
+            <small class="text-muted">Daily spend cap S$500 (demo)</small>
+          </div>
+          <i class="bi bi-chevron-right text-muted"></i>
+        </div>
+      </div>
+    </div>
+
+    <!-- Transactions -->
+    <div class="col-lg-7">
+      <div class="card shadow-sm border-0 h-100">
+        <div class="card-body">
+          <div class="d-flex justify-content-between align-items-center mb-3">
+            <h5 class="mb-0">Wallet Transactions</h5>
+            <span class="badge bg-light text-muted">Latest 20</span>
+          </div>
+          <% if (history && history.length) { %>
+            <div class="list-group list-group-flush">
+              <% history.forEach(function(tx){ %>
+                <div class="list-group-item d-flex justify-content-between align-items-center">
+                  <div>
+                    <div class="fw-semibold"><%= tx.type === 'topup' ? 'Top-up' : (tx.type === 'refund' ? 'Refund' : 'Payment') %> • <%= (tx.method || '').toUpperCase() %></div>
+                    <div class="text-muted small"><%= tx.created_at %><% if (tx.note) { %> • <%= tx.note %><% } %></div>
+                  </div>
+                  <div class="text-end">
+                    <div class="fw-semibold <%= tx.amount >= 0 ? 'text-success' : 'text-danger' %>">S$ <%= Math.abs(Number(tx.amount||0)).toFixed(2) %></div>
+                  </div>
+                </div>
+              <% }) %>
+            </div>
+          <% } else { %>
+            <p class="text-muted mb-0">No wallet transactions yet.</p>
+          <% } %>
+        </div>
+      </div>
+    </div>
   </div>
 </section>
+
+<!-- Top up modal -->
+<div class="modal fade" id="topupModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content border-0">
+      <div class="modal-header">
+        <h5 class="modal-title">Top Up</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <form method="POST" action="/wallet/topup" class="modal-body" id="topup-form">
+        <div class="mb-3">
+          <label class="form-label small text-muted">Amount</label>
+          <input type="number" step="0.01" min="1" class="form-control" name="amount" placeholder="e.g. 20.00" required>
+        </div>
+        <div class="mb-3">
+          <label class="form-label small text-muted">Top-up method</label>
+          <div class="list-group">
+            <label class="list-group-item d-flex justify-content-between align-items-center">
+              <div><i class="bi bi-bank2 me-2 text-primary"></i>Linked Bank Account</div>
+              <input class="form-check-input" type="radio" name="method" value="bank" checked>
+            </label>
+            <label class="list-group-item d-flex justify-content-between align-items-center">
+              <div><i class="bi bi-credit-card-2-front me-2 text-warning"></i>Credit / Debit Card</div>
+              <input class="form-check-input" type="radio" name="method" value="card">
+            </label>
+            <label class="list-group-item d-flex justify-content-between align-items-center">
+              <div><i class="bi bi-upc-scan me-2 text-success"></i>PayNow / NETS (QR)</div>
+              <input class="form-check-input" type="radio" name="method" value="nets">
+            </label>
+            <label class="list-group-item d-flex justify-content-between align-items-center">
+              <div><i class="bi bi-paypal me-2 text-info"></i>PayPal</div>
+              <input class="form-check-input" type="radio" name="method" value="paypal">
+            </label>
+          </div>
+        </div>
+        <div class="mb-3">
+          <label class="form-label small text-muted">Note (optional)</label>
+          <input type="text" class="form-control" name="note" placeholder="Reference or description">
+        </div>
+        <div class="d-grid">
+          <button class="btn btn-primary" type="submit" id="topup-submit">Confirm top up</button>
+        </div>
+        <p class="small text-muted mt-2 mb-0">For demo, methods mark paid instantly (no external gateway).</p>
+
+        <div class="mt-3" id="paypal-topup-wrap" style="display:none;">
+          <div id="paypal-topup-error" class="text-danger small mb-2" style="display:none;"></div>
+          <div id="paypal-topup-button"></div>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<% if (paypalClientId) { %>
+  <script src="https://www.paypal.com/sdk/js?client-id=<%= paypalClientId %>&currency=<%= paypalCurrency || 'SGD' %>"></script>
+<% } %>
+
+<script>
+  (function(){
+    const form = document.getElementById('topup-form');
+    const amountInput = form?.querySelector('input[name="amount"]');
+    const radios = form ? form.querySelectorAll('input[name="method"]') : [];
+    const submitBtn = document.getElementById('topup-submit');
+    const paypalWrap = document.getElementById('paypal-topup-wrap');
+    const paypalBtnCtn = document.getElementById('paypal-topup-button');
+    const paypalErr = document.getElementById('paypal-topup-error');
+    let paypalRendered = false;
+
+    function setPaypalError(msg){
+      if (!paypalErr) return;
+      paypalErr.textContent = msg || '';
+      paypalErr.style.display = msg ? 'block' : 'none';
+    }
+
+    async function renderPaypal(){
+      if (paypalRendered || typeof paypal === 'undefined' || !paypal?.Buttons) return;
+      paypalRendered = true;
+      paypalBtnCtn.innerHTML = '';
+      paypal.Buttons({
+        createOrder: function(){
+          setPaypalError('');
+          const amt = Number(amountInput?.value || 0);
+          if (!Number.isFinite(amt) || amt <= 0) {
+            setPaypalError('Enter a valid amount before using PayPal.');
+            return Promise.reject(new Error('Invalid amount'));
+          }
+          return fetch('/wallet/paypal/create-order', {
+            method: 'POST',
+            headers: {'Content-Type':'application/json'},
+            credentials: 'same-origin',
+            body: JSON.stringify({ amount: amt.toFixed(2) })
+          }).then(async r => {
+            const d = await r.json().catch(()=>({}));
+            if (!r.ok) throw new Error(d?.error || 'Failed to create order');
+            return d.id;
+          });
+        },
+        onApprove: function(data){
+          return fetch('/wallet/paypal/capture', {
+            method: 'POST',
+            headers: {'Content-Type':'application/json'},
+            credentials: 'same-origin',
+            body: JSON.stringify({ orderId: data.orderID })
+          }).then(async r => {
+            const d = await r.json().catch(()=>({}));
+            if (!r.ok || d?.error) throw new Error(d?.error || 'Capture failed');
+            window.location.reload();
+          }).catch(err => {
+            setPaypalError(err.message || 'PayPal capture error.');
+            throw err;
+          });
+        },
+        onError: function(err){
+          setPaypalError(err?.message || 'PayPal error.');
+        }
+      }).render('#paypal-topup-button').catch(err => {
+        paypalRendered = false;
+        setPaypalError('PayPal button failed to render.');
+        console.error(err);
+      });
+    }
+
+    function updateUI(){
+      const sel = Array.from(radios).find(r => r.checked);
+      const isPaypal = sel && sel.value === 'paypal';
+      const isNets = sel && sel.value === 'nets';
+      if (paypalWrap) paypalWrap.style.display = isPaypal ? 'block' : 'none';
+      if (submitBtn) submitBtn.style.display = isPaypal ? 'none' : 'block';
+      if (isPaypal) renderPaypal();
+      if (form) form.action = isNets ? '/wallet/nets/qr' : '/wallet/topup';
+    }
+
+    radios.forEach(r => r.addEventListener('change', updateUI));
+    updateUI();
+
+    // For NETS top-up, keep normal form submit to /wallet/nets/qr
+  })();
+</script>
 
 <%- include('partials/footer') %>

@@ -49,6 +49,7 @@
               <div class="mt-3 d-flex gap-2">
                 <a href="/checkout" class="btn btn-outline-secondary">Back to checkout</a>
                 <a href="/cart" class="btn btn-outline-dark">Back to cart</a>
+                <a href="/wallet" class="btn btn-outline-dark">Back to wallet</a>
               </div>
             </div>
 
@@ -180,12 +181,15 @@
       if (overlay) overlay.style.display = 'flex';
     }
 
+    const finalizePath = "<%= typeof finalizePath !== 'undefined' ? finalizePath : '/nets/finalize' %>";
+    const markPaidPath = "<%= typeof markPaidPath !== 'undefined' ? markPaidPath : '/nets/mark-paid' %>";
+
     async function finalizeOrder(manual = false) {
       if (completed) return;
       try {
         setStatus("Payment successful", manual ? "Finishing your order..." : "Finalizing your order...");
         showOverlay();
-        const resp = await fetch("/nets/finalize", {
+        const resp = await fetch(finalizePath, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ txnRetrievalRef })
@@ -194,7 +198,7 @@
         const data = await resp.json().catch(() => ({}));
         if (data && data.redirect) {
           completed = true;
-          window.location.href = data.redirect;
+          window.location.href = data.redirect || '/checkout';
           return;
         }
       } catch (err) {
@@ -202,7 +206,7 @@
       }
       // Fallback: use legacy redirect handler
       completed = true;
-      window.location.href = "/nets/success";
+      window.location.href = "/checkout";
     }
     // expose for manual fallback script
     window.finalizeOrder = finalizeOrder;
@@ -268,7 +272,7 @@
     async function manualComplete(){
       try {
         setStatus("Payment confirmation pending", "Marking NETS payment as received...");
-        await fetch("/nets/mark-paid", {
+        await fetch(markPaidPath, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ txnRetrievalRef })
@@ -289,7 +293,7 @@
       try {
         showOverlay();
         setStatus("Confirming payment", "Finishing your order...");
-        await fetch("/nets/mark-paid", {
+        await fetch(markPaidPath, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ txnRetrievalRef })

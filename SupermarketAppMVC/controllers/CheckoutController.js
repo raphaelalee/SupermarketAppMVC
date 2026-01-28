@@ -140,6 +140,7 @@ exports.processCheckout = (req, res) => {
 		return sum + (Number(line) || 0);
 	}, 0);
 	const total = subtotal + deliveryFee;
+	const orderNumber = `ORD-${Date.now()}-${Math.floor(Math.random() * 900 + 100)}`;
 
 	// Determine paid flag: only card payments are considered paid immediately here.
 	// PayPal will be validated separately below.
@@ -147,6 +148,65 @@ exports.processCheckout = (req, res) => {
 	let paypalMeta = null;
 	let paidAt = null;
 	if (paymentMethod === 'card') paid = true;
+
+	// Build payment instructions for non-immediate methods (declare early so wallet branch can access)
+	const payRef = `REF-${Date.now().toString().slice(-6)}-${Math.floor(Math.random()*900+100)}`;
+	const paymentInstructions = (() => {
+		if (paymentMethod === 'paynow') {
+			return {
+				method: 'paynow',
+				note: 'Scan the PayNow QR or transfer using the reference below.',
+				reference: payRef,
+				qrImage: '/images/paynow-qr.png'
+			};
+		}
+		if (paymentMethod === 'bank') {
+			return {
+				method: 'bank',
+				bankName: 'DBS Bank',
+				accountNumber: '123-456789-0',
+				accountName: 'FreshMart Pte Ltd',
+				reference: payRef,
+				note: 'Please include the reference when making bank transfer.'
+			};
+		}
+		if (paymentMethod === 'cod') {
+			return {
+				method: 'cod',
+				note: 'Pay the delivery driver in cash upon receipt. Please have the exact amount ready.'
+			};
+		}
+		return null;
+	})();
+
+	// Wallet payment path (persistent DB)
+	if (paymentMethod === 'wallet') {
+		if (!req.session.user) {
+			req.flash("error", "Please log in to use wallet.");
+			return res.redirect("/login");
+		}
+		const Wallet = require('../models/wallet');
+		return Wallet.debit(
+			req.session.user.id,
+			total,
+			'wallet',
+			'Checkout payment',
+			orderNumber,
+			null,
+			(err) => {
+				if (err) {
+					const msg = err.message === 'INSUFFICIENT_FUNDS'
+						? 'Insufficient wallet balance.'
+						: 'Wallet payment failed.';
+					req.flash('error', msg);
+					return res.redirect('/checkout');
+				}
+				paid = true;
+				paidAt = new Date().toISOString();
+				finalizeOrder();
+			}
+		);
+	}
 
 	if (paymentMethod === "nets") {
 		if (!req.session.netsPaid) {
@@ -210,84 +270,68 @@ exports.processCheckout = (req, res) => {
 	}
 
 	// Build payment instructions for non-immediate methods
-	let paymentInstructions = null;
-	const payRef = `REF-${Date.now().toString().slice(-6)}-${Math.floor(Math.random()*900+100)}`;
-	if (paymentMethod === 'paynow') {
-		paymentInstructions = {
-			method: 'paynow',
-			note: 'Scan the PayNow QR or transfer using the reference below.',
-			reference: payRef,
-			qrImage: '/images/paynow-qr.png'
-		};
-	} else if (paymentMethod === 'bank') {
-		paymentInstructions = {
-			method: 'bank',
-			bankName: 'DBS Bank',
-			accountNumber: '123-456789-0',
-			accountName: 'FreshMart Pte Ltd',
-			reference: payRef,
-			note: 'Please include the reference when making bank transfer.'
-		};
-	} else if (paymentMethod === 'cod') {
-		paymentInstructions = {
-			method: 'cod',
-			note: 'Pay the delivery driver in cash upon receipt. Please have the exact amount ready.'
-		};
-	}
+	// paymentInstructions already built above; reuse it
 
-	const orderNumber = `ORD-${Date.now()}-${Math.floor(Math.random() * 900 + 100)}`;
 	const status = paid ? "paid" : "pending";
 	if (paid && !paidAt) paidAt = new Date().toISOString();
 
-	const orderPayload = {
-		orderNumber,
-		userId: req.session.user ? req.session.user.id : null,
-		subtotal,
-		deliveryFee,
-		total,
-		deliveryMethod,
-		paymentMethod,
-		status,
-		shippingPhone: digitsOnly ? digitsOnly.slice(-8) : null,
-		customerName: req.body.shippingName || (req.session.user && req.session.user.username) || null,
-		customerEmail: (req.session.user && req.session.user.email) || (req.body.customerEmail || null),
-		customerPhone: digitsOnly ? digitsOnly.slice(-8) : null,
-		paid,
-		paidAt,
-		createdAt: new Date().toISOString(),
-		items,
-		paymentInstructions: paymentInstructions,
-		...(paymentMethod === "nets" && req.session.netsTxnRef ? { netsTxnRef: req.session.netsTxnRef } : {}),
-		...(paypalMeta ? paypalMeta : {}),
-	};
+	function finalizeOrder() {
+		const orderPayload = {
+			orderNumber,
+			userId: req.session.user ? req.session.user.id : null,
+			subtotal,
+			deliveryFee,
+			total,
+			deliveryMethod,
+			paymentMethod,
+			status: paid ? "paid" : "pending",
+			shippingPhone: digitsOnly ? digitsOnly.slice(-8) : null,
+			customerName: req.body.shippingName || (req.session.user && req.session.user.username) || null,
+			customerEmail: (req.session.user && req.session.user.email) || (req.body.customerEmail || null),
+			customerPhone: digitsOnly ? digitsOnly.slice(-8) : null,
+			paid,
+			paidAt: paidAt || (paid ? new Date().toISOString() : null),
+			createdAt: new Date().toISOString(),
+			items,
+			paymentInstructions: paymentInstructions,
+			...(paymentMethod === "nets" && req.session.netsTxnRef ? { netsTxnRef: req.session.netsTxnRef } : {}),
+			...(paypalMeta ? paypalMeta : {}),
+		};
 
-	Order.createOrder(orderPayload, items, (err, orderId) => {
-		if (err) {
-			console.error("Order save failed:", err);
-			req.flash("error", "Order placed but not saved.");
-		} else {
-			if (orderId) orderPayload.id = orderId;
-			req.flash("success", "Order placed successfully!");
-		}
+		Order.createOrder(orderPayload, items, (err, orderId) => {
+			if (err) {
+				console.error("Order save failed:", err);
+				req.flash("error", "Order placed but not saved.");
+			} else {
+				if (orderId) orderPayload.id = orderId;
+				req.flash("success", "Order placed successfully!");
+			}
 
-		req.session.lastOrder = orderPayload;
-		req.session.cart = {};
+			req.session.lastOrder = orderPayload;
+			req.session.cart = {};
 
-		// Clear PayPal session proof after use
-		req.session.paypalCapture = null;
-		req.session.paypalPending = null;
-		req.session.netsPaid = null;
-		req.session.netsTxnRef = null;
-		req.session.pendingNetsCheckout = null;
+			// Clear PayPal session proof after use
+			req.session.paypalCapture = null;
+			req.session.paypalPending = null;
+			req.session.netsPaid = null;
+			req.session.netsTxnRef = null;
+			req.session.pendingNetsCheckout = null;
+			req.session.walletPaidAmount = null;
 
-		if (req.session.user?.id) {
-			UserCart.clearCart(req.session.user.id, (clearErr) => {
-				if (clearErr) console.error(`Failed clearing user cart:`, clearErr);
-			});
-		}
+			if (req.session.user?.id) {
+				UserCart.clearCart(req.session.user.id, (clearErr) => {
+					if (clearErr) console.error(`Failed clearing user cart:`, clearErr);
+				});
+			}
 
-		res.redirect(`/order/${orderNumber}`);
-	});
+			res.redirect(`/order/${orderNumber}`);
+		});
+	}
+
+	// Non-wallet methods reach here and finalize immediately
+	if (paymentMethod !== 'wallet') {
+		finalizeOrder();
+	}
 };
 
 exports.renderReceipt = (req, res) => {

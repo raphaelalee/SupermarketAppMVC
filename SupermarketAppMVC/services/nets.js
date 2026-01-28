@@ -64,9 +64,13 @@ exports.generateQrCode = async (req, res) => {
         networkCode: qrData.network_status,
         timer: 300, // Timer in seconds
         webhookUrl: webhookUrl,
-         fullNetsResponse: response.data,
+        fullNetsResponse: response.data,
         apiKey: process.env.API_KEY,
         projectId: process.env.PROJECT_ID,
+        // Optional overrides for wallet top-ups
+        finalizePath: res.locals.finalizePath || undefined,
+        markPaidPath: res.locals.markPaidPath || undefined,
+        amount: res.locals.amount || cartTotal,
       });
     } else {
       // Handle partial or failed responses

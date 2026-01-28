@@ -30,6 +30,7 @@ const CartController = require("./controllers/CartController");
 const CheckoutController = require("./controllers/CheckoutController");
 const AdminController = require("./controllers/AdminController");
 const WalletController = require("./controllers/WalletController");
+const WalletModel = require("./models/wallet");
 
 // Logger
 app.use((req, res, next) => {
@@ -73,6 +74,19 @@ if (MySQLStore) {
 
 app.use(session(sessOptions));
 app.use(flash());
+
+// Load wallet balance for logged-in user
+app.use((req, res, next) => {
+  if (req.session?.user?.id) {
+    WalletModel.getOrCreateAccount(req.session.user.id, (err, bal) => {
+  res.locals.walletBalance = err ? 0 : bal || 0;
+  next();
+});
+  } else {
+    res.locals.walletBalance = 0;
+    next();
+  }
+});
 
 // Global locals
 app.use((req, res, next) => {
@@ -541,7 +555,14 @@ app.get("/order/:orderNumber", CheckoutController.renderReceipt);
 app.post("/paypal/create-order", CheckoutController.createPaypalOrder);
 app.post("/paypal/capture-order", CheckoutController.capturePaypalOrder);
 
-app.get("/wallet", WalletController.walletPage);
+app.get("/wallet", requireLogin, WalletController.walletPage);
+app.post("/wallet/topup", requireLogin, WalletController.topup);
+app.post("/wallet/pay", requireLogin, WalletController.payWithWallet);
+app.post("/wallet/paypal/create-order", requireLogin, WalletController.createPaypalTopup);
+app.post("/wallet/paypal/capture", requireLogin, WalletController.capturePaypalTopup);
+app.post("/wallet/nets/qr", requireLogin, WalletController.startNetsTopup);
+app.post("/wallet/nets/mark-paid", requireLogin, WalletController.netsMarkPaid);
+app.post("/wallet/nets/finalize", requireLogin, WalletController.netsFinalize);
 
 // Customer-confirm payment for offline methods
 app.post("/order/confirm-payment", CheckoutController.confirmPayment);
