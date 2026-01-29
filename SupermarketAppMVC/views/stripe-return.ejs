@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <title>Returning to store…</title>
+  </head>
+  <body>
+    <p style="font-family:Arial, sans-serif; margin:20px;">Processing payment, returning to store…</p>
+    <script>
+      (function(){
+        const params = new URLSearchParams(window.location.search);
+        const intent = params.get('payment_intent');
+        const secret = params.get('payment_intent_client_secret');
+        const payload = { type: 'stripe-return', intent, clientSecret: secret };
+        const targetOrigin = window.location.origin;
+
+        const notifyOpener = () => {
+          if (window.opener && !window.opener.closed) {
+            try { window.opener.postMessage(payload, targetOrigin); } catch(e){}
+            return true;
+          }
+          return false;
+        };
+
+        const notifyChannel = () => {
+          try {
+            const bc = new BroadcastChannel('stripe-return');
+            bc.postMessage(payload);
+            bc.close();
+            return true;
+          } catch(e){}
+          return false;
+        };
+
+        notifyOpener();
+        notifyChannel();
+
+        // Always navigate back to checkout quickly so receipt can finalize
+        const backUrl = new URL('/checkout', window.location.origin);
+        if (intent) backUrl.searchParams.set('payment_intent', intent);
+        if (secret) backUrl.searchParams.set('payment_intent_client_secret', secret);
+        setTimeout(() => {
+          window.location.replace(backUrl.toString());
+        }, 200); // small delay to allow postMessage to fire
+      })();
+    </script>
+  </body>
+</html>

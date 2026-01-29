@@ -21,7 +21,8 @@ exports.createPaymentIntent = async (amount, metadata = {}) => {
   return stripe.paymentIntents.create({
     amount: cents,
     currency: DEFAULT_CURRENCY,
-    automatic_payment_methods: { enabled: true },
+    // Explicitly allow methods we want (omit WeChat Pay)
+    payment_method_types: ["card", "grabpay", "paynow", "alipay"],
     metadata,
   });
 };

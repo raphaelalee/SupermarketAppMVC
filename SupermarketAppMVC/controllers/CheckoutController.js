@@ -168,6 +168,19 @@ exports.createStripePaymentIntent = async (req, res) => {
 	}
 };
 
+// GET /stripe/intent-status/:id  -- lightweight polling endpoint for client
+exports.getStripeIntentStatus = async (req, res) => {
+	try {
+		const intentId = req.params.id;
+		if (!intentId) return res.status(400).json({ error: "Missing intent id" });
+		const intent = await stripeSvc.retrievePaymentIntent(intentId);
+		return res.json({ status: intent?.status || null });
+	} catch (err) {
+		console.error("getStripeIntentStatus error:", err);
+		return res.status(500).json({ error: "Unable to fetch intent status" });
+	}
+};
+
 exports.processCheckout = async (req, res) => {
 	const items = res.locals.cartDetailed || [];
 
@@ -344,7 +357,9 @@ exports.processCheckout = async (req, res) => {
 		try {
 			const intent = await stripeSvc.retrievePaymentIntent(intentId);
 			const status = intent?.status;
-			if (status !== "succeeded") {
+			// PayNow / GrabPay flows can return "processing" or "requires_capture" after redirect
+			const okStatuses = ["succeeded", "processing", "requires_capture"];
+			if (!okStatuses.includes(status)) {
 				req.flash("error", "Stripe payment not completed. Please try again.");
 				return res.redirect("/checkout");
 			}

@@ -195,6 +195,7 @@ app.get("/checkout", CheckoutController.renderCheckout);
 // to OTP verification without changing controller logic.
 app.post("/checkout", (req, res, next) => {
   const payment = String(req.body.payment || "").toLowerCase();
+  // default full-page flow (no ajax redirect wrapping)
 
   // ✅ NETS Option A: send user to QR page instead of processCheckout
   if (payment === "nets") {
@@ -217,7 +218,11 @@ app.post("/checkout", (req, res, next) => {
     res.redirect = function (_url) {
       if (redirected) return;
       redirected = true;
-      return originalRedirect("/verify-otp");
+      const target = "/verify-otp";
+      if (res.locals._ajaxRedirectWrapped) {
+        return res.json({ redirect: target });
+      }
+      return originalRedirect(target);
     };
 
     return CheckoutController.processCheckout(req, res, next);
@@ -225,6 +230,17 @@ app.post("/checkout", (req, res, next) => {
 
   return CheckoutController.processCheckout(req, res, next);
 });
+
+// Stripe return bridge (closes popup/new tab and relays intent to opener)
+app.get("/stripe/return", (req, res) => {
+  res.render("stripe-return", {
+    payment_intent: req.query.payment_intent || null,
+    client_secret: req.query.payment_intent_client_secret || null,
+  });
+});
+
+// Stripe polling endpoint for client-side status checks
+app.get("/stripe/intent-status/:id", CheckoutController.getStripeIntentStatus);
 
 // =====================
 // NETS ROUTES (MOVED HERE SO flash + cartTotal EXIST)

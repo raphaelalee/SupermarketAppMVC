@@ -329,6 +329,40 @@
     const stripePaymentContainer = document.getElementById('stripe-payment-element');
     let stripeClientSecret = null;
     let stripeReturnHandled = false;
+    let stripePollTimer = null;
+    let stripeMessageHandled = false;
+    let stripeBroadcastHandled = false;
+
+    function stopStripePoll(){
+      if (stripePollTimer) {
+        clearInterval(stripePollTimer);
+        stripePollTimer = null;
+      }
+    }
+
+    async function waitForStripeSuccess(intentId, timeoutMs = 120000){
+      const start = Date.now();
+      return new Promise((resolve, reject) => {
+        stopStripePoll();
+        stripePollTimer = setInterval(async () => {
+          try {
+            const resp = await fetch(`/stripe/intent-status/${encodeURIComponent(intentId)}`);
+            const data = await resp.json().catch(()=>({}));
+            const status = data?.status;
+            if (status === 'succeeded' || status === 'requires_capture') {
+              stopStripePoll();
+              resolve(status);
+            } else if (Date.now() - start > timeoutMs) {
+              stopStripePoll();
+              resolve('timeout');
+            }
+          } catch(err){
+            stopStripePoll();
+            resolve('error');
+          }
+        }, 3000);
+      });
+    }
 
     function ensureStripeElement(){
       if (!stripePublishableKey) {
@@ -555,9 +589,10 @@
       const confirmRes = await stripe.confirmPayment({
         elements: stripeElements,
         confirmParams: {
-          return_url: window.location.origin + '/checkout', // stays on-page for this demo
+          // Send Stripe back to return bridge (handles popup/tab and posts to opener)
+          return_url: window.location.origin + '/stripe/return',
         },
-        redirect: 'if_required' // keep AJAX style when possible
+        redirect: 'always' // redirect methods (PayNow/GrabPay/Alipay) need this
       });
 
       if (confirmRes.error) {
@@ -565,11 +600,26 @@
       }
 
       const pi = confirmRes.paymentIntent;
-      if (!pi || (pi.status !== 'succeeded' && pi.status !== 'requires_capture')) {
+      if (!pi) throw new Error('Payment not completed yet.');
+
+      // PayNow / GrabPay often return requires_action with a redirect URL
+      if (pi.status === 'requires_action' && pi.next_action?.redirect_to_url?.url) {
+        window.location.assign(pi.next_action.redirect_to_url.url);
+        return; // browser will navigate away
+      }
+
+      const okStatuses = ['succeeded', 'requires_capture', 'processing'];
+      if (!okStatuses.includes(pi.status)) {
         throw new Error('Payment not completed yet.');
       }
 
+      if (stripeIntentIdEl) stripeIntentIdEl.value = pi.id || '';
       stripePaidEl.value = '1';
+      if (pi.status !== 'succeeded') {
+        await waitForStripeSuccess(pi.id);
+      }
+      checkoutForm.setAttribute('target', '_self');
+      checkoutForm.submit();
       return pi;
     }
 
@@ -583,13 +633,21 @@
       try {
         if (!stripe) stripe = Stripe(stripePublishableKey);
         const {paymentIntent} = await stripe.retrievePaymentIntent(clientSecret);
-        if (paymentIntent && paymentIntent.status === 'succeeded') {
+        const okStatuses = ['succeeded', 'processing', 'requires_capture'];
+        if (paymentIntent && okStatuses.includes(paymentIntent.status)) {
           restoreCheckoutDraft();
           const stripeRadio = Array.from(paymentRadios).find(r => r.value === 'stripe');
           if (stripeRadio) stripeRadio.checked = true;
           stripeIntentIdEl.value = paymentIntent.id;
           stripePaidEl.value = '1';
           otpRequiredEl.value = '0';
+          // ensure form posts in the same tab
+          checkoutForm.setAttribute('target', '_self');
+          // push the intent id so server can verify even if elements not rebuilt
+          if (!stripeClientSecret) stripeClientSecret = clientSecret;
+          if (paymentIntent.status !== 'succeeded') {
+            await waitForStripeSuccess(paymentIntent.id);
+          }
           // remove query params to avoid loops
           const url = new URL(window.location.href);
           url.searchParams.delete('payment_intent');
@@ -668,27 +726,34 @@
       // For wallet, let the normal POST /checkout run; server debits wallet synchronously.
 
       if (isStripe) {
-        if (!checkoutForm.checkValidity()) {
-          e.preventDefault();
-          e.stopPropagation();
-          checkoutForm.reportValidity();
-          return;
-        }
+        // If we already have a successful Stripe return (PayNow/GrabPay redirect), skip reconfirm to avoid loops
+        if (stripePaidEl && stripePaidEl.value === '1') return;
+
+      if (!checkoutForm.checkValidity()) {
         e.preventDefault();
         e.stopPropagation();
-        if (stripeCardErrors) stripeCardErrors.textContent = '';
-        if (stripeProcessing) return;
-        stripeProcessing = true;
-        setButtonLoading(true);
-        try {
-          await handleStripePayment();
-          otpRequiredEl.value = '0';
-          checkoutForm.submit();
-        } catch(err) {
-          console.error(err);
-          if (stripeCardErrors) stripeCardErrors.textContent = err.message || 'Stripe payment failed.';
-          stripePaidEl.value = '0';
-          setButtonLoading(false);
+        checkoutForm.reportValidity();
+        return;
+      }
+      e.preventDefault();
+      e.stopPropagation();
+      if (stripeCardErrors) stripeCardErrors.textContent = '';
+      if (stripeProcessing) return;
+      stripeProcessing = true;
+      setButtonLoading(true);
+      try {
+        await handleStripePayment();
+        otpRequiredEl.value = '0';
+        // let the normal form post proceed in same tab
+        stripeProcessing = false;
+        setButtonLoading(false);
+        checkoutForm.setAttribute('target', '_self');
+        checkoutForm.submit();
+      } catch(err) {
+        console.error(err);
+        if (stripeCardErrors) stripeCardErrors.textContent = err.message || 'Stripe payment failed.';
+        stripePaidEl.value = '0';
+        setButtonLoading(false);
           stripeProcessing = false;
         }
         return;
@@ -718,6 +783,40 @@
       if (stripeCardWrap) stripeCardWrap.style.display = isStripe ? 'block' : 'none';
       if (isStripe) ensureStripeElement();
       handleStripeReturn();
+
+      // Listen for postMessage from return bridge (new tab flow)
+      window.addEventListener('message', async (event) => {
+        if (stripeMessageHandled) return;
+        if (event.origin !== window.location.origin) return;
+        const data = event.data || {};
+        if (data.type !== 'stripe-return') return;
+        stripeMessageHandled = true;
+        if (data.intent) {
+          stripeIntentIdEl.value = data.intent;
+          stripePaidEl.value = '1';
+          otpRequiredEl.value = '0';
+          checkoutForm.setAttribute('target', '_self');
+          checkoutForm.submit();
+        }
+      });
+
+      // Listen via BroadcastChannel for flows where window.opener is missing (e.g., some wallets)
+      try {
+        const bc = new BroadcastChannel('stripe-return');
+        bc.onmessage = async (event) => {
+          if (stripeBroadcastHandled) return;
+          const data = event.data || {};
+          if (data.type !== 'stripe-return') return;
+          stripeBroadcastHandled = true;
+          if (data.intent) {
+            stripeIntentIdEl.value = data.intent;
+            stripePaidEl.value = '1';
+            otpRequiredEl.value = '0';
+            checkoutForm.setAttribute('target', '_self');
+            checkoutForm.submit();
+          }
+        };
+      } catch(e){ /* BroadcastChannel not available; ignore */ }
     })();
 
   })();
